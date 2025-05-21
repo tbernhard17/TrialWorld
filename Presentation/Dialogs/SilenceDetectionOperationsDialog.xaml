@@ -1,0 +1,46 @@
+<Window x:Class="TrialWorld.Presentation.Dialogs.SilenceDetectionOperationsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Silence Detection Operations" Height="300" Width="450" 
+        WindowStartupLocation="CenterOwner" 
+        ResizeMode="NoResize">
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <TextBlock Grid.Row="0" Text="Silence Detection Operations" 
+                   FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
+        
+        <!-- Description -->
+        <TextBlock Grid.Row="1" Text="Select an operation to perform on the currently loaded media file:"
+                   TextWrapping="Wrap" Margin="0,0,0,15"/>
+        
+        <!-- Operations -->
+        <StackPanel Grid.Row="2" Margin="0,10">
+            <Button x:Name="DetectSilenceButton" Content="Detect Silence" 
+                    Margin="0,5" Padding="10,5" Click="DetectSilenceButton_Click"
+                    HorizontalAlignment="Stretch"/>
+            
+            <TextBlock Text="Analyzes the current media file to find periods of silence based on your configured settings."
+                       TextWrapping="Wrap" Margin="5,0,0,15" Opacity="0.7" FontSize="12"/>
+            
+            <Button x:Name="ExportResultsButton" Content="Export Silence Detection Results" 
+                    Margin="0,5" Padding="10,5" Click="ExportResultsButton_Click"
+                    HorizontalAlignment="Stretch"/>
+            
+            <TextBlock Text="Exports the silence detection results to a CSV file for further analysis."
+                       TextWrapping="Wrap" Margin="5,0,0,15" Opacity="0.7" FontSize="12"/>
+        </StackPanel>
+        
+        <!-- Buttons -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Settings" Width="80" Margin="0,0,10,0" Click="SettingsButton_Click"/>
+            <Button Content="Close" Width="80" IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

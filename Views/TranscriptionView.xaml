@@ -1,0 +1,228 @@
+<Window x:Class="TrialWorld.AssemblyAIDiagnostic.Views.TranscriptionView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:TrialWorld.AssemblyAIDiagnostic.Views"
+        xmlns:vm="clr-namespace:TrialWorld.AssemblyAIDiagnostic.ViewModels"
+        mc:Ignorable="d"
+        Title="AssemblyAI Transcription" Height="600" Width="800">
+    
+    <Window.Resources>
+        <ResourceDictionary>
+            <Style x:Key="ButtonStyle" TargetType="Button">
+                <Setter Property="Padding" Value="15,8" />
+                <Setter Property="Margin" Value="5" />
+                <Setter Property="Background" Value="#1E90FF" />
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" 
+                                    BorderBrush="{TemplateBinding BorderBrush}" 
+                                    BorderThickness="{TemplateBinding BorderThickness}" 
+                                    CornerRadius="4">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#0066CC" />
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter Property="Background" Value="#003399" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Background" Value="#CCCCCC" />
+                                    <Setter Property="Foreground" Value="#888888" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            
+            <Style x:Key="StatusTextBlockStyle" TargetType="TextBlock">
+                <Setter Property="Margin" Value="5" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+            
+            <Style x:Key="HeaderTextBlockStyle" TargetType="TextBlock">
+                <Setter Property="Margin" Value="5" />
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+    
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- File Selection -->
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            
+            <TextBox Grid.Column="0" Text="{Binding SelectedFilePath, Mode=TwoWay}" 
+                     IsReadOnly="True" Margin="5" Padding="5" />
+            <Button Grid.Column="1" Content="Select File" 
+                    Command="{Binding SelectFileCommand}"
+                    Style="{StaticResource ButtonStyle}" />
+        </Grid>
+        
+        <!-- Transcription Controls -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+            <Button Content="Start Transcription" 
+                    Command="{Binding StartTranscriptionCommand}" 
+                    Style="{StaticResource ButtonStyle}" />
+            <Button Content="Cancel" 
+                    Command="{Binding CancelTranscriptionCommand}" 
+                    Style="{StaticResource ButtonStyle}" />
+        </StackPanel>
+        
+        <!-- Progress and Status -->
+        <Grid Grid.Row="2" Margin="0,0,0,10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            
+            <ProgressBar Grid.Row="0" Value="{Binding ProgressValue}" 
+                         Height="20" Margin="5" />
+            <TextBlock Grid.Row="1" Text="{Binding StatusMessage}" 
+                       Style="{StaticResource StatusTextBlockStyle}" />
+        </Grid>
+        
+        <!-- Status Bar -->
+        <StatusBar Grid.Row="3" Background="#F0F0F0">
+            <TextBlock Text="{Binding StatusMessage}" Margin="5"/>
+            <ProgressBar Width="200" Height="15" Value="{Binding ProgressValue}" Maximum="100" Margin="10,0" Visibility="{Binding IsTranscribing, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+        </StatusBar>
+        
+        <!-- Search Section -->
+        <GroupBox Grid.Row="4" Header="Search Transcriptions" Margin="10" Padding="5">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBox Grid.Row="0" Grid.Column="0" Margin="5" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" 
+                         VerticalContentAlignment="Center"/>
+                <Button Grid.Row="0" Grid.Column="1" Content="Search" Margin="5" Padding="10,5" 
+                        Command="{Binding SearchCommand}"
+                        IsEnabled="{Binding IsSearching, Converter={StaticResource InverseBooleanConverter}}"/>
+                <Button Grid.Row="0" Grid.Column="2" Content="Rebuild Index" Margin="5" Padding="10,5" 
+                        Command="{Binding RebuildIndexCommand}"
+                        IsEnabled="{Binding IsSearching, Converter={StaticResource InverseBooleanConverter}}"/>
+                
+                <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="5" 
+                           Text="Enter text to search across all transcriptions" Foreground="Gray"/>
+            </Grid>
+        </GroupBox>
+        
+        <!-- Search Results -->
+        <ListView Grid.Row="5" Margin="10" ItemsSource="{Binding SearchResults}">
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn Header="File Name" Width="200" DisplayMemberBinding="{Binding FileName}"/>
+                    <GridViewColumn Header="Transcript" Width="400">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Text}" TextWrapping="Wrap" MaxWidth="390"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Duration" Width="80">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding DurationSeconds, StringFormat=hh\:mm\:ss}"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Created" Width="150">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding CreatedDate, StringFormat=g}"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                </GridView>
+            </ListView.View>
+        </ListView>
+        
+        <!-- Tabbed Interface -->
+        <TabControl Grid.Row="3" Margin="5">
+            <TabItem Header="Transcription">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Transcription Result" 
+                               Style="{StaticResource HeaderTextBlockStyle}" />
+                    <TextBox Grid.Row="1" Text="{Binding TranscriptionText, Mode=TwoWay}" 
+                             IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" 
+                             VerticalScrollBarVisibility="Auto" Margin="5" />
+                </Grid>
+            </TabItem>
+            <TabItem Header="Queue">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Transcription Queue" 
+                               Style="{StaticResource HeaderTextBlockStyle}" />
+                    <ListView Grid.Row="1" ItemsSource="{Binding TranscriptionQueue}" 
+                              Margin="5">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="File Name" 
+                                                DisplayMemberBinding="{Binding FileName}" 
+                                                Width="200" />
+                                <GridViewColumn Header="Status" 
+                                                DisplayMemberBinding="{Binding StatusText}" 
+                                                Width="100" />
+                                <GridViewColumn Header="Submitted" 
+                                                DisplayMemberBinding="{Binding SubmittedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}" 
+                                                Width="150" />
+                                <GridViewColumn Header="Duration" 
+                                                DisplayMemberBinding="{Binding FormattedDuration}" 
+                                                Width="100" />
+                                <GridViewColumn Header="Error" 
+                                                DisplayMemberBinding="{Binding ErrorMessage}" 
+                                                Width="200" />
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </Grid>
+            </TabItem>
+        </TabControl>
+        
+        <!-- Footer -->
+        <StatusBar Grid.Row="4">
+            <StatusBarItem>
+                <TextBlock Text="AssemblyAI Direct API Integration" />
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>

@@ -1,0 +1,130 @@
+<Window x:Class="TrialWorld.Presentation.Views.VideoComparison.ABComparisonView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="A/B Comparison"
+        Height="720"
+        Width="1280">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="300"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Original Video Player -->
+        <Grid Grid.Column="0"
+              Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Text="Original"
+                       FontSize="16"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,5"/>
+
+            <MediaElement x:Name="OriginalPlayer"
+                          Grid.Row="1"
+                          LoadedBehavior="Manual"
+                          UnloadedBehavior="Stop"
+                          ScrubbingEnabled="True"/>
+        </Grid>
+
+        <!--  Controls -->
+        <Border Grid.Column="2"
+                Background="#F5F5F5"
+                BorderBrush="#DDDDDD"
+                BorderThickness="1,0,0,0">
+
+            <StackPanel Margin="15">
+                <TextBlock Text=" Controls"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,15"/>
+
+                <!-- Noise Reduction -->
+                <TextBlock Text="Noise Reduction"
+                           Margin="0,5"/>
+                <Grid Margin="0,0,0,15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="50"/>
+                    </Grid.ColumnDefinitions>
+                    <Slider x:Name="NoiseReductionSlider"
+                            Minimum="0"
+                            Maximum="100"
+                            Value="{Binding NoiseReduction}"
+                            TickFrequency="1"
+                            IsSnapToTickEnabled="True"/>
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding Value, ElementName=NoiseReductionSlider, StringFormat={}{0:0}}"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Right"/>
+                </Grid>
+
+                <!-- Bass Boost -->
+                <TextBlock Text="Bass Boost"
+                           Margin="0,5"/>
+                <Grid Margin="0,0,0,15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="50"/>
+                    </Grid.ColumnDefinitions>
+                    <Slider x:Name="BassBoostSlider"
+                            Minimum="0"
+                            Maximum="100"
+                            Value="{Binding BassBoost}"
+                            TickFrequency="1"
+                            IsSnapToTickEnabled="True"/>
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding Value, ElementName=BassBoostSlider, StringFormat={}{0:0}}"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Right"/>
+                </Grid>
+
+                <!-- Treble Boost -->
+                <TextBlock Text="Treble Boost"
+                           Margin="0,5"/>
+                <Grid Margin="0,0,0,15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="50"/>
+                    </Grid.ColumnDefinitions>
+                    <Slider x:Name="TrebleBoostSlider"
+                            Minimum="0"
+                            Maximum="100"
+                            Value="{Binding TrebleBoost}"
+                            TickFrequency="1"
+                            IsSnapToTickEnabled="True"/>
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding Value, ElementName=TrebleBoostSlider, StringFormat={}{0:0}}"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Right"/>
+                </Grid>
+
+                <!-- Transport Controls -->
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+                            Margin="0,20,0,0">
+                    <Button x:Name="PlayButton"
+                            Content="Play"
+                            Width="80"
+                            Margin="5"
+                            Click="PlayButton_Click"/>
+                    <Button x:Name="PauseButton"
+                            Content="Pause"
+                            Width="80"
+                            Margin="5"
+                            Click="PauseButton_Click"/>
+                    <Button x:Name="StopButton"
+                            Content="Stop"
+                            Width="80"
+                            Margin="5"
+                            Click="StopButton_Click"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

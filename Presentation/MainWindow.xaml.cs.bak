@@ -1,0 +1,935 @@
+using TrialWorld.Presentation.Dialogs;
+using TrialWorld.Presentation.ViewModels;
+using TrialWorld.Presentation.Interfaces;
+// Using alias to resolve ambiguity between model and viewmodel types
+using ModelTranscriptionQueueItem = TrialWorld.Presentation.Models.TranscriptionQueueItem;
+using System;
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Threading;
+using Microsoft.Win32;
+using TrialWorld.Core.Interfaces;
+using Microsoft.Extensions.Logging;
+using TrialWorld.Core.Models.Configuration;
+
+namespace TrialWorld.Presentation
+{
+    /// <summary>
+    /// Interaction logic for MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window
+    {
+        // Media timer for updating UI during playback
+        private readonly Process _currentProcess = Process.GetCurrentProcess();
+        private readonly ILogger<MainWindow> _logger;
+        private readonly MainWindowViewModel _viewModel = null!; // Initialized in constructor
+        private readonly INotificationService _notificationService;
+        private readonly Views.TranscriptionView _transcriptionView;
+        private DispatcherTimer _mediaTimer = null!; // Initialized in MediaPlayer_MediaOpened
+
+        public MainWindow(MainWindowViewModel viewModel, ILogger<MainWindow> logger, INotificationService notificationService, Views.TranscriptionView transcriptionView)
+        {
+            // Log the state of dependencies
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] MainWindow constructor called. viewModel is null: {viewModel == null}");
+            
+            // Validate input parameters
+            if (logger is null)
+                throw new ArgumentNullException(nameof(logger));
+            if (viewModel is null)
+                throw new ArgumentNullException(nameof(viewModel));
+            if (notificationService is null)
+                throw new ArgumentNullException(nameof(notificationService));
+            if (transcriptionView is null)
+                throw new ArgumentNullException(nameof(transcriptionView));
+                
+            logger.LogInformation("[DEBUG] MainWindow constructor called. viewModel is null: {isNull}", viewModel == null);
+
+            InitializeComponent();
+            DataContext = viewModel;
+            _logger = logger;
+            _viewModel = viewModel;
+            _notificationService = notificationService;
+            _transcriptionView = transcriptionView;
+
+            // Register for key down events for media navigation
+            this.KeyDown += MainWindow_KeyDown;
+            
+            // Initialize the model selection view model - get the transcription service from the main view model
+            var transcriptionService = viewModel.TranscriptionService;
+            if (transcriptionService != null)
+            {
+                _transcriptionModelViewModel = new TranscriptionModelViewModel(transcriptionService);
+                logger.LogInformation("TranscriptionModelViewModel initialized with model: {Model}", _transcriptionModelViewModel?.SelectedModel);
+            }
+            else
+            {
+                logger.LogWarning("TranscriptionService is null, TranscriptionModelViewModel not initialized");
+            }
+            
+            // Set DataContext for silence detection progress bar
+            SilenceProgressBar.DataContext = _silenceDetectionSettings;
+        }
+
+        // FFmpeg check logic
+        void CheckFFmpegAvailability()
+        {
+            try
+            {
+                // Use view model binding for status text
+                if (DataContext is MainWindowViewModel vm)
+                {
+                    vm.StatusText = "Checking FFmpeg availability...";
+                    // FFmpeg version check removed: _ffmpegService is not available.
+                    vm.StatusText = $"FFmpeg status unknown";
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Error detecting FFmpeg: {ex.Message}\n\nThe application may not function correctly without FFmpeg installed.",
+                    "FFmpeg Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                if (DataContext is MainWindowViewModel vm)
+                {
+                    vm.StatusText = "FFmpeg not detected - functionality limited";
+                }
+                _logger.LogError(ex, "Error detecting FFmpeg");
+            }
+        }
+
+        /// <summary>
+        /// Handles the window closing event
+        /// </summary>
+        void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            // Clean up resources
+            // _resourceMonitorTimer is not available; cleanup skipped.
+            _logger.LogInformation("Application shutting down");
+        }
+
+        /// <summary>
+        /// Updates the resource usage statistics
+        /// </summary>
+        void ResourceMonitorTimer_Tick(object sender, EventArgs e)
+        {
+            try
+            {
+                _currentProcess.Refresh();
+                // Update CPU usage text
+                // cpuUsageText.Text removed; use ViewModel binding instead
+                // Update memory usage text
+                double memoryMB = _currentProcess.WorkingSet64 / (1024.0 * 1024.0);
+                // memoryUsageText.Text removed; use ViewModel binding instead
+                _logger.LogInformation("CPU: {CpuTime} ms, RAM: {MemoryMB} MB",
+                    _currentProcess.TotalProcessorTime.TotalMilliseconds, memoryMB);
+            }
+            catch
+            {
+                // Ignore errors in resource monitoring
+            }
+        }
+
+        /// <summary>
+        /// Gets the application version
+        /// </summary>
+        string GetApplicationVersion()
+        {
+            try
+            {
+                var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+                var version = System.Reflection.AssemblyName.GetAssemblyName(assembly.Location).Version;
+                return version != null
+                    ? $"{version.Major}.{version.Minor}.{version.Build}"
+                    : "1.0.0";
+            }
+            catch
+            {
+                return "1.0.0";
+            }
+        }
+
+        #region Menu Event Handlers
+
+        /// <summary>
+        /// Handles the Open Media menu click
+        /// </summary>
+        void OpenMedia_Click(object sender, RoutedEventArgs e)
+        {
+            var openFileDialog = new OpenFileDialog
+            {
+                Filter = "Media Files|*.mp4;*.mkv;*.avi;*.mov;*.wmv;*.mp3;*.wav;*.aac|All Files|*.*",
+                Title = "Select Media File"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                // Set the source of the MediaPlayer element and play
+                MediaPlayer.Source = new Uri(openFileDialog.FileName);
+                MediaPlayer.LoadedBehavior = MediaState.Manual;
+                MediaPlayer.UnloadedBehavior = MediaState.Manual;
+                MediaPlayer.Play();
+            }
+        }
+
+        /// <summary>
+        /// Handles the Exit menu click
+        /// </summary>
+        void Exit_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        /// <summary>
+        /// Handles the Settings menu click
+        /// </summary>
+        public void Settings_Click(object sender, RoutedEventArgs e)
+        {
+            // TODO: Implement settings dialog
+            MessageBox.Show("Settings dialog not yet implemented.", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        /// <summary>
+        /// Handles the Manage Models menu click
+        /// </summary>
+        void ManageModels_Click(object sender, RoutedEventArgs e)
+        {
+            // TODO: Implement model management dialog
+            MessageBox.Show("Model management not yet implemented.", "Manage Models", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        /// <summary>
+        /// Handles the About menu click
+        /// </summary>
+        void About_Click(object sender, RoutedEventArgs e)
+        {
+            string message = "Trial World AI - Media Analysis Tool\n\n"
+                + $"Version: {GetApplicationVersion()}\n"
+                + " 2023 Trial World AI\n\n"
+                + "A powerful media analysis application that leverages AI \n"
+                + "to provide face detection, transcription, content analysis, \n"
+                + "and more for your media files.";
+
+            MessageBox.Show(message, "About Trial World AI", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        
+        /// <summary>
+        /// Handles the Video button click to open a file picker for media files
+        /// </summary>
+        public void VideoButton_Click(object sender, RoutedEventArgs e)
+        {
+            var openFileDialog = new OpenFileDialog
+            {
+                Filter = "Media Files|*.mp4;*.mkv;*.avi;*.mov;*.wmv;*.mp3;*.wav;*.aac|All Files|*.*",
+                Title = "Select Media File to Play"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                // Set the source of the MediaPlayer element and play
+                MediaPlayer.Source = new Uri(openFileDialog.FileName);
+                MediaPlayer.Play();
+            }
+        }
+
+        /// <summary>
+        /// Handles the Documentation menu click
+        /// </summary>
+        void Documentation_Click(object sender, RoutedEventArgs e)
+        {
+            // TODO: Open documentation in default browser
+            MessageBox.Show("Documentation not yet available.", "Documentation", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        #endregion
+        // Playback Controls
+
+        // Media player timer for progress updates
+        private bool _isDraggingSlider = false;
+        private double _currentPlaybackSpeed = 1.0;
+        
+        /// <summary>
+        /// Handles media element opened event to set up duration
+        /// </summary>
+        void MediaPlayer_MediaOpened(object sender, RoutedEventArgs e)
+        {
+            // Initialize timer to update position slider
+            if (_mediaTimer == null)
+            {
+                _mediaTimer = new DispatcherTimer();
+                _mediaTimer.Interval = TimeSpan.FromMilliseconds(500);
+                _mediaTimer.Tick += MediaTimer_Tick;
+            }
+            
+            // Start timer
+            _mediaTimer.Start();
+            
+            // Set up duration
+            if (MediaPlayer.NaturalDuration.HasTimeSpan)
+            {
+                ProgressSlider.Maximum = MediaPlayer.NaturalDuration.TimeSpan.TotalSeconds;
+                TotalTimeText.Text = FormatTimeSpan(MediaPlayer.NaturalDuration.TimeSpan);
+            }
+            
+            // Enable controls
+            ProgressSlider.IsEnabled = true;
+            PlayPauseButton.Content = "⏸";
+        }
+        
+        /// <summary>
+        /// Handles media ended event
+        /// </summary>
+        void MediaPlayer_MediaEnded(object sender, RoutedEventArgs e)
+        {
+            MediaPlayer.Stop();
+            ProgressSlider.Value = 0;
+            CurrentTimeText.Text = "0:00";
+            PlayPauseButton.Content = "▶";
+            _mediaTimer?.Stop();
+        }
+        
+        /// <summary>
+        /// Timer tick to update position slider
+        /// </summary>
+        private void MediaTimer_Tick(object? sender, EventArgs e)
+        {
+            if (MediaPlayer.Source != null && MediaPlayer.NaturalDuration.HasTimeSpan && !_isDraggingSlider)
+            {
+                ProgressSlider.Value = MediaPlayer.Position.TotalSeconds;
+                CurrentTimeText.Text = FormatTimeSpan(MediaPlayer.Position);
+            }
+        }
+        
+        /// <summary>
+        /// Format TimeSpan as mm:ss or hh:mm:ss
+        /// </summary>
+        string FormatTimeSpan(TimeSpan time)
+        {
+            return time.Hours > 0 
+                ? $"{time.Hours}:{time.Minutes:D2}:{time.Seconds:D2}"
+                : $"{time.Minutes}:{time.Seconds:D2}";
+        }
+        
+        /// <summary>
+        /// Combined play/pause button handler
+        /// </summary>
+        void PlayPauseButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (MediaPlayer.Source == null) return;
+            
+            if (MediaPlayer.CanPause && MediaPlayer.Position > TimeSpan.Zero && PlayPauseButton.Content.ToString() == "⏸")
+            {
+                MediaPlayer.Pause();
+                PlayPauseButton.Content = "▶";
+            }
+            else
+            {
+                MediaPlayer.Play();
+                PlayPauseButton.Content = "⏸";
+            }
+        }
+
+        /// <summary>
+        /// Stop button handler
+        /// </summary>
+        void StopButton_Click(object sender, RoutedEventArgs e)
+        {
+            MediaPlayer.Stop();
+            ProgressSlider.Value = 0;
+            CurrentTimeText.Text = "0:00";
+            PlayPauseButton.Content = "▶";
+        }
+
+        /// <summary>
+        /// Mute button handler
+        /// </summary>
+        void MuteButton_Click(object sender, RoutedEventArgs e)
+        {
+            MediaPlayer.IsMuted = !MediaPlayer.IsMuted;
+            MuteButton.Content = MediaPlayer.IsMuted ? "🔇" : "🔊";
+        }
+        
+        /// <summary>
+        /// Progress slider drag started
+        /// </summary>
+        void ProgressSlider_DragStarted(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e)
+        {
+            _isDraggingSlider = true;
+        }
+        
+        /// <summary>
+        /// Progress slider drag completed
+        /// </summary>
+        void ProgressSlider_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+        {
+            _isDraggingSlider = false;
+            if (MediaPlayer.Source != null)
+            {
+                MediaPlayer.Position = TimeSpan.FromSeconds(ProgressSlider.Value);
+                CurrentTimeText.Text = FormatTimeSpan(MediaPlayer.Position);
+            }
+        }
+        
+        /// <summary>
+        /// Progress slider value changed
+        /// </summary>
+        void ProgressSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_isDraggingSlider && MediaPlayer.Source != null)
+            {
+                // Update current time text while dragging
+                CurrentTimeText.Text = FormatTimeSpan(TimeSpan.FromSeconds(ProgressSlider.Value));
+            }
+        }
+        
+        /// <summary>
+        /// Handle mouse clicks directly on the progress slider for seeking
+        /// </summary>
+        void ProgressSlider_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (MediaPlayer.Source != null && MediaPlayer.NaturalDuration.HasTimeSpan)
+            {
+                // Get the slider and validate
+                if (sender is not Slider slider)
+                    return;
+                
+                // Calculate the position based on where the user clicked
+                Point clickPosition = e.GetPosition(slider);
+                double ratio = clickPosition.X / slider.ActualWidth;
+                double newValue = ratio * slider.Maximum;
+                
+                // Set the slider value and update media position
+                slider.Value = newValue;
+                MediaPlayer.Position = TimeSpan.FromSeconds(newValue);
+                CurrentTimeText.Text = FormatTimeSpan(MediaPlayer.Position);
+            }
+        }
+        
+        /// <summary>
+        /// Handle keyboard navigation for media player
+        /// </summary>
+        private void MainWindow_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (MediaPlayer.Source != null && MediaPlayer.NaturalDuration.HasTimeSpan)
+            {
+                switch (e.Key)
+                {
+                    case System.Windows.Input.Key.Right:
+                        // Skip forward 10 seconds
+                        SkipMedia(10);
+                        e.Handled = true;
+                        break;
+                        
+                    case System.Windows.Input.Key.Left:
+                        // Skip backward 10 seconds
+                        SkipMedia(-10);
+                        e.Handled = true;
+                        break;
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Skip media playback by a specified number of seconds
+        /// </summary>
+        private void SkipMedia(int seconds)
+        {
+            if (MediaPlayer.Source != null && MediaPlayer.NaturalDuration.HasTimeSpan)
+            {
+                // Calculate new position
+                TimeSpan currentPosition = MediaPlayer.Position;
+                TimeSpan newPosition = currentPosition.Add(TimeSpan.FromSeconds(seconds));
+                
+                // Ensure we stay within bounds
+                if (newPosition < TimeSpan.Zero)
+                    newPosition = TimeSpan.Zero;
+                    
+                if (newPosition > MediaPlayer.NaturalDuration.TimeSpan)
+                    newPosition = MediaPlayer.NaturalDuration.TimeSpan;
+                
+                // Set new position
+                MediaPlayer.Position = newPosition;
+                ProgressSlider.Value = newPosition.TotalSeconds;
+                CurrentTimeText.Text = FormatTimeSpan(newPosition);
+                
+                // Log the position change
+                _logger.LogInformation("Media skipped {Seconds} seconds to position {Position}", 
+                    seconds, FormatTimeSpan(newPosition));
+            }
+        }
+        
+        /// <summary>
+        /// Volume slider value changed
+        /// </summary>
+        void VolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (MediaPlayer != null)
+            {
+                MediaPlayer.Volume = VolumeSlider.Value;
+                MuteButton.Content = MediaPlayer.Volume > 0 ? "🔊" : "🔇";
+            }
+        }
+        
+        /// <summary>
+        /// Media settings button handler
+        /// </summary>
+        void MediaSettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Create settings context menu
+            ContextMenu menu = new ContextMenu();
+            
+            // Playback speed submenu
+            MenuItem speedMenuItem = new MenuItem() { Header = "Playback Speed" };
+            
+            // Speed options
+            double[] speedOptions = { 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0 };
+            foreach (double speed in speedOptions)
+            {
+                MenuItem speedOption = new MenuItem() 
+                { 
+                    Header = speed == 1.0 ? "Normal" : speed.ToString("0.##") + "x",
+                    IsChecked = Math.Abs(speed - _currentPlaybackSpeed) < 0.01
+                };
+                
+                // Capture the current speed value for the lambda
+                double capturedSpeed = speed;
+                speedOption.Click += (s, args) => 
+                {
+                    MediaPlayer.SpeedRatio = capturedSpeed;
+                    _currentPlaybackSpeed = capturedSpeed;
+                };
+                
+                speedMenuItem.Items.Add(speedOption);
+            }
+            
+            menu.Items.Add(speedMenuItem);
+            
+            // Resolution/Quality submenu (placeholder - WPF MediaElement doesn't natively support quality selection)
+            MenuItem qualityMenuItem = new MenuItem() { Header = "Quality" };
+            
+            string[] qualityOptions = { "Auto", "1080p", "720p", "480p", "360p" };
+            foreach (string quality in qualityOptions)
+            {
+                MenuItem qualityOption = new MenuItem() 
+                { 
+                    Header = quality,
+                    IsChecked = quality == "Auto"
+                };
+                
+                qualityOption.Click += (s, args) => 
+                {
+                    // TODO: This would require a custom video player implementation
+                    // that supports quality selection, which is beyond WPF's MediaElement
+                    MessageBox.Show($"Quality selection ({quality}) is not supported by the built-in media player.", 
+                        "Quality Selection", MessageBoxButton.OK, MessageBoxImage.Information);
+                };
+                
+                qualityMenuItem.Items.Add(qualityOption);
+            }
+            
+            menu.Items.Add(qualityMenuItem);
+            
+            // Show context menu
+            menu.PlacementTarget = (Button)sender;
+            menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Top;
+            menu.IsOpen = true;
+        }
+
+        // Removed GearButton_Click handler as the redundant gear button was removed from the UI
+
+        public void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            this.Close();
+        }
+        
+        /// <summary>
+        /// Handles the Settings button click to show a popup menu
+        /// </summary>
+        public void SettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Create context menu programmatically
+            ContextMenu menu = new ContextMenu();
+            
+            // Add menu items for each directory picker option
+            MenuItem extractedAudioItem = new MenuItem() { Header = "Extracted Audio" };
+            extractedAudioItem.Click += PickExtractedAudioFolder_Click;
+            menu.Items.Add(extractedAudioItem);
+            
+            MenuItem transcriptsItem = new MenuItem() { Header = "Transcripts" };
+            transcriptsItem.Click += PickTranscriptsFolder_Click;
+            menu.Items.Add(transcriptsItem);
+            
+            MenuItem databaseItem = new MenuItem() { Header = "Transcription Database" };
+            databaseItem.Click += PickTranscriptionDatabaseFolder_Click;
+            menu.Items.Add(databaseItem);
+            
+            menu.Items.Add(new Separator());
+            
+            MenuItem settingsItem = new MenuItem() { Header = "Settings" };
+            settingsItem.Click += Settings_Click;
+            menu.Items.Add(settingsItem);
+            
+            // Show context menu at button position
+            menu.PlacementTarget = (Button)sender;
+            menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+            menu.IsOpen = true;
+        }
+        
+        // TranscriptionButton_Click is implemented in MainWindow.TranscriptionHandlers.cs
+        
+        /// <summary>
+        /// Handles the Search button click in the taskbar
+        /// </summary>
+        private void SearchButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Switch to search tab/functionality
+            // Show search panel if hidden
+            RightPanel.Visibility = System.Windows.Visibility.Visible;
+            
+            // Focus the search textbox for immediate searching
+            SearchTextBox.Focus();
+        }
+        
+        /// <summary>
+        /// Handles the Search button click in the search panel
+        /// </summary>
+        private async void SearchPanelButton_Click(object sender, RoutedEventArgs e)
+        {
+            await PerformSearchAsync();
+        }
+        
+        /// <summary>
+        /// Handles the search functionality
+        /// </summary>
+        private async Task PerformSearchAsync()
+        {
+            if (DataContext is MainWindowViewModel vm)
+            {
+                string searchText = SearchTextBox.Text?.Trim() ?? string.Empty;
+                
+                // Get search options
+                bool includeWords = WordsCheckBox.IsChecked ?? false;
+                bool includeSentiment = SentimentCheckBox.IsChecked ?? false;
+                bool includeHighlights = HighlightsCheckBox.IsChecked ?? false;
+                bool includeChapters = ChaptersCheckBox.IsChecked ?? false;
+                
+                // Get sentiment filter
+                string sentimentFilter = "All";
+                if (PositiveRadio.IsChecked == true) sentimentFilter = "positive";
+                else if (NeutralRadio.IsChecked == true) sentimentFilter = "neutral";
+                else if (NegativeRadio.IsChecked == true) sentimentFilter = "negative";
+                
+                // Perform search
+                await vm.SearchAsync(searchText, includeWords, includeSentiment, includeHighlights, includeChapters, sentimentFilter);
+            }
+        }
+        
+        /// <summary>
+        /// Handles jumping to timestamp in the video player
+        /// </summary>
+        private void JumpToTimestamp_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.CommandParameter is SearchResultItem resultItem)
+            {
+                // Jump to timestamp in the video
+                if (MediaPlayer != null)
+                {
+                    // Convert milliseconds to TimeSpan
+                    var position = TimeSpan.FromMilliseconds(resultItem.StartTimeMs);
+                    MediaPlayer.Position = position;
+                    
+                    // Ensure player is started
+                    if (MediaPlayer.Source != null)
+                    {
+                        MediaPlayer.Play();
+                        PlayPauseButton.Content = "⏸";
+                    }
+                }
+            }
+        }
+        // Transcription menu and panel event handlers
+        private void AddFileMenu_Click(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel != null)
+            {
+                _viewModel.AddFileCommand.Execute(null);
+            }
+        }
+
+        private void AddFolderMenu_Click(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel != null)
+            {
+                _viewModel.AddFolderCommand.Execute(null);
+            }
+        }
+
+        private void CancelAllMenu_Click(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel != null)
+            {
+                _viewModel.CancelAllCommand.Execute(null);
+            }
+        }
+
+        private void ClearQueueMenu_Click(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel != null)
+            {
+                _viewModel.ClearQueueCommand.Execute(null);
+            }
+        }
+
+        private void ProcessAll_Click(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel != null)
+            {
+                _viewModel.ProcessAllCommand.Execute(null);
+            }
+        }
+
+        private void CancelAll_Click(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel != null)
+            {
+                _viewModel.CancelAllCommand.Execute(null);
+            }
+        }
+
+        private void ClearQueue_Click(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel != null)
+            {
+                _viewModel.ClearQueueCommand.Execute(null);
+            }
+        }
+
+        private void StopSingle_Click(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel != null && sender is FrameworkElement element && element.Tag is TranscriptionQueueItem item)
+            {
+                _viewModel.StopSingleCommand.Execute(item);
+            }
+        }
+
+        private void RemoveSingle_Click(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel != null && sender is FrameworkElement element && element.Tag is TranscriptionQueueItem item)
+            {
+                _viewModel.RemoveSingleCommand.Execute(item);
+            }
+        }
+
+        // Settings gear menu event handlers
+
+        void PickExtractedAudioFolder_Click(object sender, RoutedEventArgs e)
+        {
+            var dlg = new System.Windows.Forms.FolderBrowserDialog();
+            if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                // TODO: Save dlg.SelectedPath to settings (ExtractedAudioPath)
+                MessageBox.Show($"Extracted Audio folder set to: {dlg.SelectedPath}", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        void PickTranscriptsFolder_Click(object sender, RoutedEventArgs e)
+        {
+            var dlg = new System.Windows.Forms.FolderBrowserDialog();
+            if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                // TODO: Save dlg.SelectedPath to settings (TranscriptsPath)
+                MessageBox.Show($"Transcripts folder set to: {dlg.SelectedPath}", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        void PickTranscriptionDatabaseFolder_Click(object sender, RoutedEventArgs e)
+        {
+            var dlg = new System.Windows.Forms.FolderBrowserDialog();
+            if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                // TODO: Save dlg.SelectedPath to settings (TranscriptionDatabasePath)
+                MessageBox.Show($"Transcription Database folder set to: {dlg.SelectedPath}", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        // Silence Detection settings (can be persisted as needed)
+        private readonly SilenceDetectionViewModel _silenceDetectionSettings = new SilenceDetectionViewModel();
+        
+        // Transcription model selection (for AssemblyAI model choice)
+        private readonly TranscriptionModelViewModel _transcriptionModelViewModel;
+
+        private void SilenceDetectionButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Create a context menu for the silence detection button
+            var contextMenu = new ContextMenu();
+            
+            // Add menu items
+            var settingsItem = new MenuItem { Header = "Silence Detection Settings" };
+            settingsItem.Click += (s, args) => ShowSilenceDetectionSettings();
+            
+            var detectItem = new MenuItem { Header = "Detect Silence in Current Video" };
+            detectItem.Click += (s, args) => DetectSilenceInCurrentVideo();
+            detectItem.IsEnabled = MediaPlayer.Source != null; // Only enable if a video is loaded
+            
+            var saveItem = new MenuItem { Header = "Save Video Without Silent Spots" };
+            saveItem.Click += (s, args) => SaveVideoWithoutSilence();
+            // Access the MainWindowViewModel through DataContext
+            var viewModel = DataContext as MainWindowViewModel;
+            saveItem.IsEnabled = viewModel?.MediaPlayerViewModel?.HasSilenceDetectionResults ?? false;
+            
+            // Add items to context menu
+            contextMenu.Items.Add(settingsItem);
+            contextMenu.Items.Add(new Separator());
+            contextMenu.Items.Add(detectItem);
+            contextMenu.Items.Add(saveItem);
+            
+            // Show the context menu
+            contextMenu.PlacementTarget = sender as UIElement;
+            contextMenu.Placement = PlacementMode.Bottom;
+            contextMenu.IsOpen = true;
+        }
+        
+        /// <summary>
+        /// Shows the silence detection settings dialog
+        /// </summary>
+        private void ShowSilenceDetectionSettings()
+        {
+            var dialog = new SilenceDetectionDialog(_silenceDetectionSettings);
+            dialog.Owner = this;
+            if (dialog.ShowDialog() == true)
+            {
+                // Settings are updated in _silenceDetectionSettings
+                _notificationService?.ShowNotification(
+                    $"Silence Detection settings saved:\nPadding: {_silenceDetectionSettings.Padding} seconds\nNoise Ceiling: {_silenceDetectionSettings.NoiseCeiling} dB",
+                    "Settings Saved",
+                    Models.NotificationType.Information
+                );
+            }
+        }
+        
+        /// <summary>
+        /// Detects silence in the currently loaded video
+        /// </summary>
+        private async void DetectSilenceInCurrentVideo()
+        {
+            if (MediaPlayer.Source == null)
+            {
+                _notificationService?.ShowNotification("No video loaded", "Error", Models.NotificationType.Error);
+                return;
+            }
+            
+            try
+            {
+                // Show progress bar
+                SilenceProgressBar.Visibility = Visibility.Visible;
+                _silenceDetectionSettings.ResetProgress();
+                _silenceDetectionSettings.IsDetectingSilence = true;
+                
+                // Get the current media file path
+                var mediaPath = MediaPlayer.Source.LocalPath;
+                
+                // Start silence detection process
+                await Task.Run(async () =>
+                {
+                    // Simulate progress updates (replace with actual implementation)
+                    for (int i = 0; i <= 100; i += 5)
+                    {
+                        _silenceDetectionSettings.SilenceDetectionProgress = i;
+                        await Task.Delay(200); // Simulate processing time
+                    }
+                    
+                    // In a real implementation, this would call the silence detection service
+                    // Example: await _silenceDetectionService.DetectSilenceAsync(mediaPath, _silenceDetectionSettings.NoiseCeiling, _silenceDetectionSettings.Padding);
+                });
+                
+                // Update UI when complete
+                _silenceDetectionSettings.IsDetectingSilence = false;
+                _notificationService?.ShowNotification("Silence detection complete", "Success", Models.NotificationType.Success);
+                
+                // Update the MediaPlayerViewModel with silence detection results
+                var viewModel = DataContext as MainWindowViewModel;
+                if (viewModel?.MediaPlayerViewModel != null)
+                {
+                    // In a real implementation, this would set the silence periods from the detection results
+                    // For now, we'll simulate that silence was detected
+                    viewModel.MediaPlayerViewModel.HasSilenceDetectionResults = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error detecting silence");
+                _notificationService?.ShowNotification($"Error detecting silence: {ex.Message}", "Error", Models.NotificationType.Error);
+            }
+            finally
+            {
+                // Hide progress bar after completion or error
+                await Task.Delay(1000); // Keep progress visible briefly
+                SilenceProgressBar.Visibility = Visibility.Collapsed;
+            }
+        }
+        
+        /// <summary>
+        /// Saves the video with silent spots removed
+        /// </summary>
+        private void SaveVideoWithoutSilence()
+        {
+            var viewModel = DataContext as MainWindowViewModel;
+            if (!(viewModel?.MediaPlayerViewModel?.HasSilenceDetectionResults ?? false))
+            {
+                _notificationService?.ShowNotification("No silence detection results available", "Error", Models.NotificationType.Error);
+                return;
+            }
+            
+            // Show save file dialog
+            var saveFileDialog = new SaveFileDialog
+            {
+                Filter = "MP4 Files (*.mp4)|*.mp4|All Files (*.*)|*.*",
+                DefaultExt = ".mp4",
+                Title = "Save Video Without Silent Spots"
+            };
+            
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    // In a real implementation, this would call the service to process the video and remove silent spots
+                    // Example: await _silenceRemovalService.RemoveSilenceAsync(MediaPlayer.Source.LocalPath, saveFileDialog.FileName, viewModel.MediaPlayerViewModel.SilencePeriods);
+                    
+                    _notificationService?.ShowNotification("Video saved successfully", "Success", Models.NotificationType.Success);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error saving video");
+                    _notificationService?.ShowNotification($"Error saving video: {ex.Message}", "Error", Models.NotificationType.Error);
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Updates the selected transcription model when the user selects a different model from the menu
+        /// </summary>
+        private void SelectTranscriptionModel(Core.Models.Configuration.AssemblyAIModel model)
+        {
+            if (_transcriptionModelViewModel.SelectedModel != model)
+            {
+                // Update the viewmodel which will update the service
+                _transcriptionModelViewModel.SelectedModel = model;
+                
+                // Log the change
+                _logger.LogInformation("Transcription model changed to: {Model}", model);
+                
+                // Show a notification to confirm the change
+                MessageBox.Show(
+                    $"Transcription model set to: {model}\n\nDescription: {TranscriptionModelViewModel.GetModelDescription(model)}\n\nCost: {TranscriptionModelViewModel.GetModelCostIndicator(model)}",
+                    "Transcription Model Changed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information
+                );
+            }
+        }
+    }
+}

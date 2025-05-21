@@ -1,0 +1,1018 @@
+<UserControl x:Class="TrialWorld.Presentation.Controls.CourtroomMediaPlayer"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:TrialWorld.Presentation.Controls"
+             xmlns:conv="clr-namespace:TrialWorld.Presentation.Converters"
+             mc:Ignorable="d"
+             d:DesignHeight="600"
+             d:DesignWidth="800"
+             Background="#000000">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <!-- Converters -->
+            <conv:TimeSpanToStringConverter x:Key="TimeSpanConverter"/>
+            <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+            <conv:BooleanToVisibilityInverseConverter x:Key="BooleanToVisibilityInverseConverter"/>
+            <conv:StringToUriConverter x:Key="StringToUriConverter"/>
+
+            <!-- Icons as Path Geometries -->
+            <PathGeometry x:Key="PlayIcon">M 0,0 L 0,10 L 10,5 Z</PathGeometry>
+            <PathGeometry x:Key="PauseIcon">M 0,0 L 3,0 L 3,10 L 0,10 Z M 6,0 L 9,0 L 9,10 L 6,10 Z</PathGeometry>
+            <PathGeometry x:Key="StopIcon">M 0,0 L 10,0 L 10,10 L 0,10 Z</PathGeometry>
+            <PathGeometry x:Key="VolumeMuteIcon">M 0,4 L 3,4 L 6,1 L 6,9 L 3,6 L 0,6 Z</PathGeometry>
+            <PathGeometry x:Key="VolumeIcon">M 0,4 L 3,4 L 6,1 L 6,9 L 3,6 L 0,6 Z M 7,3 A 4,4 0 0 1 7,7</PathGeometry>
+            <PathGeometry x:Key="FullscreenIcon">M 0,0 L 3,0 L 3,2 L 1,2 L 1,3 L 0,3 Z M 7,0 L 10,0 L 10,3 L 9,3 L 9,2 L 7,2 Z M 0,7 L 1,7 L 1,8 L 3,8 L 3,10 L 0,10 Z M 9,7 L 10,7 L 10,10 L 7,10 L 7,8 L 9,8 Z</PathGeometry>
+            <PathGeometry x:Key="SnapshotIcon">M 0,2 L 3,2 L 4,0 L 6,0 L 7,2 L 10,2 L 10,10 L 0,10 Z M 5,3 A 3,3 0 1 0 5,9 A 3,3 0 1 0 5,3 Z</PathGeometry>
+            <PathGeometry x:Key="FilterIcon">M 0,1 L 10,1 L 6,5 L 6,10 L 4,10 L 4,5 Z</PathGeometry>
+            <PathGeometry x:Key="ExportIcon">M 0,8 L 0,10 L 10,10 L 10,8 Z M 5,0 L 5,7 M 2,4 L 5,7 L 8,4</PathGeometry>
+            <PathGeometry x:Key="SaveIcon">M 1,1 L 9,1 L 9,9 L 1,9 Z M 2,1 L 2,5 L 8,5 L 8,1 M 3,2.5 A 1,1 0 1 0 5,2.5 A 1,1 0 1 0 3,2.5 Z M 3,7 L 7,7</PathGeometry>
+            <PathGeometry x:Key="StepBackwardIcon">M 0,5 L 7,0 L 7,10 Z M 7,0 L 10,0 L 10,10 L 7,10 Z</PathGeometry>
+            <PathGeometry x:Key="StepForwardIcon">M 0,0 L 3,0 L 3,10 L 0,10 Z M 3,5 L 10,10 L 10,0 Z</PathGeometry>
+
+            <!-- Button Style -->
+            <Style x:Key="MediaControlButtonStyle"
+                   TargetType="Button">
+                <Setter Property="Background"
+                        Value="Transparent"/>
+                <Setter Property="BorderThickness"
+                        Value="0"/>
+                <Setter Property="Padding"
+                        Value="8"/>
+                <Setter Property="Margin"
+                        Value="2"/>
+                <Setter Property="Width"
+                        Value="36"/>
+                <Setter Property="Height"
+                        Value="36"/>
+                <Setter Property="Cursor"
+                        Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="18">
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver"
+                                         Value="True">
+                                    <Setter Property="Background"
+                                            Value="#33FFFFFF"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed"
+                                         Value="True">
+                                    <Setter Property="Background"
+                                            Value="#66FFFFFF"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled"
+                                         Value="False">
+                                    <Setter Property="Opacity"
+                                            Value="0.5"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Transcript Item Style -->
+            <Style x:Key="TranscriptItemStyle"
+                   TargetType="ListBoxItem">
+                <Setter Property="Padding"
+                        Value="10,5"/>
+                <Setter Property="Margin"
+                        Value="0,2"/>
+                <Setter Property="Background"
+                        Value="Transparent"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ListBoxItem">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="#22FFFFFF"
+                                    BorderThickness="0,0,0,1"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsSelected"
+                                         Value="True">
+                                    <Setter Property="Background"
+                                            Value="#335294E2"/>
+                                </Trigger>
+                                <Trigger Property="IsMouseOver"
+                                         Value="True">
+                                    <Setter Property="Background"
+                                            Value="#22FFFFFF"/>
+                                </Trigger>
+                                <DataTrigger Binding="{Binding IsHighlighted}"
+                                             Value="True">
+                                    <Setter Property="Background"
+                                            Value="#335294E2"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsSearchMatch}"
+                                             Value="True">
+                                    <Setter Property="Background"
+                                            Value="#33F9A825"/>
+                                </DataTrigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Background="#000000">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/> <!-- Video content -->
+            <RowDefinition Height="3"/> <!-- Progress bar -->
+            <RowDefinition Height="40"/> <!-- Controls -->
+        </Grid.RowDefinitions>
+
+        <!-- Bind to the ViewModel's properties -->
+        <Grid.Resources>
+            <Style TargetType="MediaElement">
+                <Setter Property="LoadedBehavior" Value="Manual"/>
+                <Setter Property="UnloadedBehavior" Value="Manual"/>
+                <Setter Property="Stretch" Value="Uniform"/>
+                <Setter Property="Source" Value="{Binding CurrentMediaPath}"/>
+            </Style>
+        </Grid.Resources>
+
+        <!-- Video Display Area (YouTube Style) -->
+        <Border Grid.Row="0"
+                Background="Black"
+                ClipToBounds="True">
+            <Grid>
+                <!-- Main Media Element for video playback -->
+                <MediaElement x:Name="mediaElement"
+                              LoadedBehavior="Manual"
+                              UnloadedBehavior="Manual"
+                              Stretch="Uniform"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch"
+                              Source="{Binding CurrentMediaPath, Converter={StaticResource StringToUriConverter}}"
+                              Volume="1.0"
+                              ScrubbingEnabled="True"
+                              MediaOpened="MediaElement_MediaOpened"
+                              MediaEnded="MediaElement_MediaEnded"
+                              MediaFailed="MediaElement_MediaFailed"/>
+                              
+                <Image x:Name="videoDisplay"
+                       Stretch="Uniform"
+                       HorizontalAlignment="Stretch"
+                       VerticalAlignment="Stretch"
+                       RenderOptions.BitmapScalingMode="HighQuality"
+                       Visibility="Collapsed"/>
+
+                <!-- Overlays -->
+                <!-- Loading Overlay -->
+                <Border x:Name="loadingOverlayVideo"
+                        Background="#66000000"
+                        Visibility="Collapsed">
+                    <StackPanel HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                        <TextBlock Text="Loading..."
+                                   Foreground="White"
+                                   FontSize="18"
+                                   HorizontalAlignment="Center"/>
+                        <ProgressBar Width="200"
+                                     Height="4"
+                                     Margin="0,10,0,0"
+                                     IsIndeterminate="True"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Error Overlay -->
+                <Border x:Name="errorOverlayVideo"
+                        Background="#99000000"
+                        Visibility="Collapsed">
+                    <StackPanel HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                MaxWidth="400">
+                        <TextBlock Text="Error"
+                                   Foreground="White"
+                                   FontSize="20"
+                                   FontWeight="Bold"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="errorMessage"
+                                   Foreground="White"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   Margin="0,10,0,15"/>
+                        <Button Content="OK"
+                                Width="80"
+                                Height="30"
+                                Click="ErrorOkButton_Click"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Play/Pause Overlay (appears on click) -->
+                <Border x:Name="playPauseOverlay"
+                        Background="Transparent"
+                        MouseLeftButtonDown="VideoDisplay_MouseLeftButtonDown">
+                    <Path x:Name="bigPlayPauseIcon"
+                          Fill="White"
+                          Width="60"
+                          Height="60"
+                          Stretch="Uniform"
+                          Opacity="0"
+                          Data="{StaticResource PlayIcon}"/>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Timeline / Scrubber (YouTube Style) -->
+        <Grid Grid.Row="1">
+            <!-- Position Slider (YouTube Style) -->
+            <Slider x:Name="positionSliderTimeline"
+                    Maximum="100"
+                    SmallChange="1"
+                    LargeChange="10"
+                    IsMoveToPointEnabled="True"
+                    Thumb.DragStarted="PositionSlider_DragStarted"
+                    Thumb.DragCompleted="PositionSlider_DragCompleted"
+                    ValueChanged="PositionSlider_ValueChanged"
+                    Height="3"
+                    Margin="0">
+                <Slider.Template>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid>
+                            <Border x:Name="PART_Border" BorderBrush="Transparent" BorderThickness="0" Background="#444444" Height="3"/>
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static Slider.DecreaseLarge}" Background="#FF0000" Height="3"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static Slider.IncreaseLarge}" Background="Transparent"/>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Width="12" Height="12">
+                                        <Thumb.Template>
+                                            <ControlTemplate>
+                                                <Ellipse Fill="#FF0000" Visibility="Hidden"/>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Slider.Template>
+            </Slider>
+        </Grid>
+
+        <!-- Processing Status Bar -->
+        <Grid Grid.Row="2"
+              Background="#242424"
+              Visibility="{Binding IsProcessing, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <StackPanel Grid.Column="0" Margin="10,2">
+                <TextBlock Text="{Binding StatusMessage}" 
+                           Foreground="White" 
+                           FontSize="12" 
+                           Margin="0,0,0,2"/>
+                <ProgressBar Value="{Binding ProcessingProgress}" 
+                             Height="8" 
+                             Maximum="100" 
+                             Minimum="0" 
+                             Background="#333333" 
+                             Foreground="#5294E2"/>
+            </StackPanel>
+            
+            <Button Grid.Column="1" 
+                    Command="{Binding CancelProcessingCommand}" 
+                    Content="Cancel" 
+                    Margin="5,2" 
+                    Padding="8,2" 
+                    Background="#444444" 
+                    Foreground="White" 
+                    BorderBrush="#555555"/>
+        </Grid>
+        
+        <!-- Control Bar (YouTube Style) -->
+        <Grid Grid.Row="2"
+              Background="#0F0F0F"
+              Height="40"
+              Visibility="{Binding IsProcessing, Converter={StaticResource BooleanToVisibilityInverseConverter}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/> <!-- Play controls -->
+                <ColumnDefinition Width="Auto"/> <!-- Time display -->
+                <ColumnDefinition Width="*"/> <!-- Spacer -->
+                <ColumnDefinition Width="Auto"/> <!-- Volume controls -->
+                <ColumnDefinition Width="Auto"/> <!-- Settings -->
+                <ColumnDefinition Width="Auto"/> <!-- Fullscreen -->
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Controls (Play/Pause, Previous, Next) -->
+            <StackPanel Grid.Column="0"
+                        Orientation="Horizontal"
+                        Margin="16,0,16,0"
+                        VerticalAlignment="Center">
+                <!-- Play/Pause Button -->
+                <Button x:Name="playPauseButton"
+                        Style="{StaticResource MediaControlButtonStyle}"
+                        Click="PlayPauseButton_Click"
+                        ToolTip="Play/Pause"
+                        Margin="0,0,16,0">
+                    <Path x:Name="playPauseIcon"
+                          Fill="White"
+                          Width="20"
+                          Height="20"
+                          Stretch="Uniform"
+                          Data="{StaticResource PlayIcon}"/>
+                </Button>
+
+                <!-- Step Backward Button -->
+                <Button x:Name="stepBackwardButton"
+                        Style="{StaticResource MediaControlButtonStyle}"
+                        Click="StepBackwardButton_Click"
+                        ToolTip="Previous 5 seconds"
+                        Margin="0,0,16,0">
+                    <Path Fill="White"
+                          Width="18"
+                          Height="18"
+                          Stretch="Uniform"
+                          Data="{StaticResource StepBackwardIcon}"/>
+                </Button>
+
+                <!-- Step Forward Button -->
+                <Button x:Name="stepForwardButton"
+                        Style="{StaticResource MediaControlButtonStyle}"
+                        Click="StepForwardButton_Click"
+                        ToolTip="Next 5 seconds">
+                    <Path Fill="White"
+                          Width="18"
+                          Height="18"
+                          Stretch="Uniform"
+                          Data="{StaticResource StepForwardIcon}"/>
+                </Button>
+            </StackPanel>
+            
+            <!-- Time Display -->
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        Margin="8,0"
+                        VerticalAlignment="Center">
+                <TextBlock x:Name="currentPositionText"
+                           Text="0:00"
+                           Foreground="#FFFFFF"
+                           FontSize="13"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text=" / "
+                           Foreground="#AAAAAA"
+                           FontSize="13"
+                           VerticalAlignment="Center"/>
+                <TextBlock x:Name="totalDurationText"
+                           Text="0:00"
+                           Foreground="#AAAAAA"
+                           FontSize="13"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Center Controls (Speed) -->
+            <StackPanel Grid.Column="2"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                <TextBlock Text="Speed"
+                           Foreground="White"
+                           FontSize="12"
+                           VerticalAlignment="Center"
+                           Margin="0,0,8,0"/>
+                <ComboBox x:Name="playbackSpeedComboBox"
+                          Width="60"
+                          Height="24"
+                          SelectedIndex="2"
+                          Background="#272727"
+                          Foreground="White"
+                          BorderBrush="#444444"
+                          SelectionChanged="PlaybackSpeedComboBox_SelectionChanged">
+                    <ComboBoxItem Content="0.25x"/>
+                    <ComboBoxItem Content="0.5x"/>
+                    <ComboBoxItem Content="1.0x"/>
+                    <ComboBoxItem Content="1.5x"/>
+                    <ComboBoxItem Content="2.0x"/>
+                </ComboBox>
+            </StackPanel>
+
+            <!-- Volume Controls -->
+            <StackPanel Grid.Column="3"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Center"
+                        Margin="0,0,16,0">
+                <!-- Volume Button -->
+                <Button x:Name="volumeButton"
+                        Style="{StaticResource MediaControlButtonStyle}"
+                        Click="VolumeButton_Click"
+                        ToolTip="Mute/Unmute"
+                        Margin="0,0,8,0">
+                    <Path x:Name="volumeIcon"
+                          Fill="White"
+                          Width="20"
+                          Height="20"
+                          Stretch="Uniform"
+                          Data="M 0,5 L 2,5 L 6,1 L 6,11 L 2,7 L 0,7 Z M 8,3 C 10,5 10,7 8,9 M 10,1 C 14,5 14,7 10,11"/>
+                </Button>
+                
+                <!-- Volume Slider -->
+                <Slider x:Name="volumeSlider"
+                        Width="80"
+                        Minimum="0"
+                        Maximum="1"
+                        Value="1"
+                        SmallChange="0.01"
+                        LargeChange="0.1"
+                        VerticalAlignment="Center"
+                        ValueChanged="VolumeSlider_ValueChanged"/>
+            </StackPanel>
+
+            <!-- Silence Detection -->
+            <StackPanel Grid.Column="4"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Center"
+                        Margin="0,0,16,0">
+                <Button x:Name="silenceMenuButton"
+                        Click="SilenceMenuButton_Click"
+                        ToolTip="Silence Detection Options"
+                        Style="{StaticResource MediaControlButtonStyle}">
+                    <Path Data="M 0,7 L 2,7 L 4,3 L 6,10 L 8,5 L 10,7"
+                          Stroke="White"
+                          StrokeThickness="1.5"
+                          Width="18"
+                          Height="18"
+                          Stretch="Uniform"/>
+                </Button>
+                
+                <!-- Snapshot Button -->
+                <Button x:Name="snapshotButton"
+                        Style="{StaticResource MediaControlButtonStyle}"
+                        Click="SnapshotButton_Click"
+                        ToolTip="Take Snapshot">
+                    <Path Fill="White"
+                          Width="16"
+                          Height="16"
+                          Stretch="Uniform"
+                          Data="{StaticResource SnapshotIcon}"/>
+                </Button>
+            </StackPanel>
+            
+            <!-- Fullscreen Button -->
+            <StackPanel Grid.Column="5"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Center"
+                        Margin="0,0,16,0">
+                <Button x:Name="fullscreenButton"
+                        Style="{StaticResource MediaControlButtonStyle}"
+                        Click="FullscreenButton_Click"
+                        ToolTip="Fullscreen">
+                    <Path Fill="White"
+                          Width="18"
+                          Height="18"
+                          Stretch="Uniform"
+                          Data="M 0,3 L 3,3 L 3,0 L 5,0 L 5,5 L 0,5 Z M 8,0 L 10,0 L 10,3 L 13,3 L 13,5 L 8,5 Z M 10,10 L 10,13 L 8,13 L 8,8 L 13,8 L 13,10 Z M 3,13 L 0,13 L 0,8 L 5,8 L 5,13 L 3,13 Z"/>
+                </Button>
+            </StackPanel>
+            
+            <!-- Additional Controls -->
+            <StackPanel Grid.Column="4" 
+                        Orientation="Horizontal"
+                        VerticalAlignment="Center"
+                        Margin="0,0,16,0">
+                <!-- Clip Export Button -->
+                <Button x:Name="exportButton"
+                        Style="{StaticResource MediaControlButtonStyle}"
+                        Command="{Binding ExportSilenceResultsCommand}"
+                        IsEnabled="{Binding HasSilenceDetectionResults}"
+                        ToolTip="Export Detected Silence Periods"
+                        Margin="0,0,8,0"
+                        AutomationProperties.Name="Export Silence Results">
+                    <Path Fill="White"
+                          Width="18"
+                          Height="18"
+                          Stretch="Uniform"
+                          Data="{StaticResource ExportIcon}"/>
+                </Button>
+
+                <Button x:Name="saveVideoButton"
+                        Style="{StaticResource MediaControlButtonStyle}"
+                        Command="{Binding SaveVideoAfterSilenceCommand}"
+                        IsEnabled="{Binding HasSilenceDetectionResults}"
+                        ToolTip="Save Video With Silence Removed"
+                        Margin="0,0,8,0"
+                        AutomationProperties.Name="Save Video After Silence">
+                    <Path Fill="White"
+                          Width="18"
+                          Height="18"
+                          Stretch="Uniform"
+                          Data="{StaticResource SaveIcon}"/>
+                </Button>
+
+                <!-- Filters Button -->
+                <Button x:Name="filtersButton"
+                        Style="{StaticResource MediaControlButtonStyle}"
+                        Click="FiltersButton_Click"
+                        ToolTip="Apply Filters">
+                    <Path Fill="White"
+                          Width="18"
+                          Height="18"
+                          Stretch="Uniform"
+                          Data="{StaticResource FilterIcon}"/>
+                </Button>
+
+                <!-- Additional Controls Placeholder -->
+                <!-- This section intentionally left empty to maintain layout structure -->
+                <Border Width="0" Height="0"/>
+            </StackPanel>
+        </Grid>
+
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+
+                                        <TextBlock Text="{Binding Text}"
+                                                   Foreground="White"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <!-- Resizer -->
+            <GridSplitter Grid.Column="1"
+                          Width="5"
+                          Background="#555555"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Stretch"/>
+
+            <!-- Thumbnail/Keywords Panel -->
+            <TabControl Grid.Column="2"
+                        Background="#2F2F2F"
+                        BorderThickness="0">
+                <!-- Keywords Tab -->
+                <TabItem Header="Keywords">
+                    <ListBox x:Name="keywordsList"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             SelectionChanged="KeywordsList_SelectionChanged">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#333333"
+                                        Padding="8,5"
+                                        CornerRadius="3"
+                                        Margin="2">
+                                    <TextBlock Text="{Binding}"
+                                               Foreground="White"/>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                    </ListBox>
+                </TabItem>
+
+                <!-- Thumbnails Tab -->
+                <TabItem Header="Thumbnails">
+                    <ListView x:Name="thumbnailsList"
+                              Background="Transparent"
+                              BorderThickness="0"
+                              SelectionChanged="ThumbnailsList_SelectionChanged">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Width="120"
+                                            Margin="5">
+                                    <Border BorderBrush="#444444"
+                                            BorderThickness="1">
+                                        <Image Source="{Binding ThumbnailPath}"
+                                               Width="120"
+                                               Height="68"
+                                               Stretch="Uniform"/>
+                                    </Border>
+                                    <TextBlock Text="{Binding StartTime, Converter={StaticResource TimeSpanConverter}}"
+                                               Foreground="White"
+                                               HorizontalAlignment="Center"
+                                               Margin="0,3,0,0"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                        <ListView.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ListView.ItemsPanel>
+                    </ListView>
+                </TabItem>
+
+                <!-- Emotions Tab -->
+                <TabItem Header="Emotions">
+                    <ListBox x:Name="emotionsList"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             SelectionChanged="EmotionsList_SelectionChanged">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="60"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Grid.Column="0"
+                                               Text="{Binding TimeInSeconds, Converter={StaticResource TimeSpanConverter}}"
+                                               Foreground="White"/>
+
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding Type}"
+                                               Foreground="#F9A825"
+                                               FontWeight="SemiBold"/>
+
+                                    <ProgressBar Grid.Column="2"
+                                                 Value="{Binding Confidence}"
+                                                 Maximum="1.0"
+                                                 Foreground="#F9A825"
+                                                 Height="12"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </TabItem>
+            </TabControl>
+        </Grid>
+
+        <!-- Filters Popup -->
+        <Popup x:Name="filtersPopup"
+               PlacementTarget="{Binding ElementName=filtersButton}"
+               StaysOpen="False">
+            <Border Background="#333333"
+                    BorderBrush="#555555"
+                    BorderThickness="1"
+                    Padding="10">
+                <StackPanel Width="250">
+                    <TextBlock Text="Video Filters"
+                               Foreground="White"
+                               FontWeight="Bold"
+                               Margin="0,0,0,10"/>
+
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Text="Brightness"
+                                   Foreground="White"/>
+                        <Slider Grid.Column="1"
+                                x:Name="brightnessFader"
+                                Minimum="-1"
+                                Maximum="1"
+                                Value="0"
+                                TickFrequency="0.1"
+                                TickPlacement="BottomRight"
+                                ValueChanged="VideoFilter_ValueChanged"/>
+                    </Grid>
+
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Text="Contrast"
+                                   Foreground="White"/>
+                        <Slider Grid.Column="1"
+                                x:Name="contrastFader"
+                                Minimum="0"
+                                Maximum="2"
+                                Value="1"
+                                TickFrequency="0.1"
+                                TickPlacement="BottomRight"
+                                ValueChanged="VideoFilter_ValueChanged"/>
+                    </Grid>
+
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Text="Saturation"
+                                   Foreground="White"/>
+                        <Slider Grid.Column="1"
+                                x:Name="saturationFader"
+                                Minimum="0"
+                                Maximum="2"
+                                Value="1"
+                                TickFrequency="0.1"
+                                TickPlacement="BottomRight"
+                                ValueChanged="VideoFilter_ValueChanged"/>
+                    </Grid>
+
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Text="Sharpness"
+                                   Foreground="White"/>
+                        <Slider Grid.Column="1"
+                                x:Name="sharpnessFader"
+                                Minimum="0"
+                                Maximum="5"
+                                Value="0"
+                                TickFrequency="0.5"
+                                TickPlacement="BottomRight"
+                                ValueChanged="VideoFilter_ValueChanged"/>
+                    </Grid>
+
+                    <Separator Margin="0,10"/>
+
+                    <TextBlock Text="Audio Filters"
+                               Foreground="White"
+                               FontWeight="Bold"
+                               Margin="0,0,0,10"/>
+
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Text="Gain"
+                                   Foreground="White"/>
+                        <Slider Grid.Column="1"
+                                x:Name="gainFader"
+                                Minimum="-20"
+                                Maximum="20"
+                                Value="0"
+                                TickFrequency="2"
+                                TickPlacement="BottomRight"
+                                ValueChanged="AudioFilter_ValueChanged"/>
+                    </Grid>
+
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Text="Bass"
+                                   Foreground="White"/>
+                        <Slider Grid.Column="1"
+                                x:Name="bassFader"
+                                Minimum="-20"
+                                Maximum="20"
+                                Value="0"
+                                TickFrequency="2"
+                                TickPlacement="BottomRight"
+                                ValueChanged="AudioFilter_ValueChanged"/>
+                    </Grid>
+
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Text="Treble"
+                                   Foreground="White"/>
+                        <Slider Grid.Column="1"
+                                x:Name="trebleFader"
+                                Minimum="-20"
+                                Maximum="20"
+                                Value="0"
+                                TickFrequency="2"
+                                TickPlacement="BottomRight"
+                                ValueChanged="AudioFilter_ValueChanged"/>
+                    </Grid>
+
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Text="Noise Reduc."
+                                   Foreground="White"/>
+                        <Slider Grid.Column="1"
+                                x:Name="noiseReductionFader"
+                                Minimum="0"
+                                Maximum="1"
+                                Value="0"
+                                TickFrequency="0.1"
+                                TickPlacement="BottomRight"
+                                ValueChanged="AudioFilter_ValueChanged"/>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                Margin="0,10,0,0">
+                        <Button Content="Reset"
+                                Width="60"
+                                Margin="0,0,5,0"
+                                Click="ResetFilters_Click"/>
+                        <Button Content="Apply"
+                                Width="60"
+                                Click="ApplyFilters_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- Silence Detection Menu -->
+        <Popup x:Name="silenceDetectionPopup"
+               PlacementTarget="{Binding ElementName=silenceMenuButton}"
+               StaysOpen="False">
+            <Border Background="#333333"
+                    BorderBrush="#555555"
+                    BorderThickness="1"
+                    Padding="10">
+                <StackPanel Width="250">
+                    <TextBlock Text="Silence Detection"
+                               Foreground="White"
+                               FontWeight="Bold"
+                               Margin="0,0,0,10"/>
+                    
+                    <Button Content="Detect Silence"
+                            x:Name="detectSilenceMenuItem"
+                            Command="{Binding DetectSilenceCommand}"
+                            Margin="0,5"
+                            Padding="5"
+                            HorizontalContentAlignment="Left"/>
+                    
+                    <Button Content="Remove Silence"
+                            x:Name="removeSilenceMenuItem"
+                            Command="{Binding RemoveSilenceCommand}"
+                            Margin="0,5"
+                            Padding="5"
+                            HorizontalContentAlignment="Left"/>
+                    
+                    <Button Content="Save Video With Silence Removed"
+                            x:Name="saveVideoAfterDetectionMenuItem"
+                            Click="SaveVideoAfterDetection_Click"
+                            Margin="0,5"
+                            Padding="5"
+                            HorizontalContentAlignment="Left"/>
+                    
+                    <Separator Margin="0,10"/>
+                    
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Text="Min Duration (s):"
+                                   Grid.Row="0"
+                                   Grid.Column="0"
+                                   Foreground="White"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,10,0"/>
+                        
+                        <Slider x:Name="minSilenceDurationSlider"
+                                Grid.Row="0"
+                                Grid.Column="1"
+                                Minimum="1"
+                                Maximum="30"
+                                Value="10"
+                                TickFrequency="1"
+                                IsSnapToTickEnabled="True"
+                                ValueChanged="MinSilenceDurationSlider_ValueChanged"/>
+                        
+                        <TextBlock Text="Noise Floor (dB):"
+                                   Grid.Row="1"
+                                   Grid.Column="0"
+                                   Foreground="White"
+                                   VerticalAlignment="Center"
+                                   Margin="0,10,10,0"/>
+                        
+                        <Slider x:Name="noiseFloorSlider"
+                                Grid.Row="1"
+                                Grid.Column="1"
+                                Minimum="-60"
+                                Maximum="-10"
+                                Value="-30"
+                                TickFrequency="5"
+                                IsSnapToTickEnabled="True"
+                                Margin="0,10,0,0"
+                                ValueChanged="NoiseFloorSlider_ValueChanged"/>
+                    </Grid>
+                    
+                    <StackPanel Orientation="Horizontal"
+                                Margin="0,10,0,0"
+                                HorizontalAlignment="Right">
+                        <TextBlock x:Name="silenceSettingsDisplay"
+                                   Text="10.0s at -30dB"
+                                   Foreground="#CCCCCC"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,10,0"/>
+                        
+                        <Button Content="Apply"
+                                x:Name="applySilenceSettingsButton"
+                                Click="ApplySilenceSettings_Click"
+                                Width="60"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Popup>
+        
+        <!-- Export Clip Dialog -->
+        <Popup x:Name="exportPopup"
+               PlacementTarget="{Binding ElementName=exportButton}"
+               StaysOpen="False">
+            <Border Background="#333333"
+                    BorderBrush="#555555"
+                    BorderThickness="1"
+                    Padding="10">
+                <StackPanel Width="300">
+                    <TextBlock Text="Export Clip"
+                               Foreground="White"
+                               FontWeight="Bold"
+                               Margin="0,0,0,10"/>
+
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Text="Start Time"
+                                   Foreground="White"/>
+                        <TextBox Grid.Column="1"
+                                 x:Name="exportStartTimeBox"
+                                 Text="00:00:00"/>
+                    </Grid>
+
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Text="End Time"
+                                   Foreground="White"/>
+                        <TextBox Grid.Column="1"
+                                 x:Name="exportEndTimeBox"
+                                 Text="00:00:10"/>
+                    </Grid>
+
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Text="Output File"
+                                   Foreground="White"/>
+                        <TextBox Grid.Column="1"
+                                 x:Name="exportFilePathBox"/>
+                        <Button Grid.Column="2"
+                                Content="..."
+                                Width="30"
+                                Click="BrowseExportPath_Click"/>
+                    </Grid>
+
+                    <CheckBox x:Name="applyFiltersCheckbox"
+                              Content="Apply Current Filters"
+                              Foreground="White"
+                              Margin="0,10,0,10"
+                              IsChecked="True"/>
+
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                Margin="0,10,0,0">
+                        <Button Content="Cancel"
+                                Width="60"
+                                Margin="0,0,5,0"
+                                Click="CancelExport_Click"/>
+                        <Button Content="Export"
+                                Width="60"
+                                Click="ConfirmExport_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>

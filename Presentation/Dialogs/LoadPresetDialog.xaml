@@ -1,0 +1,41 @@
+<Window x:Class="TrialWorld.Presentation.Dialogs.LoadPresetDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Load Preset"
+        Height="300"
+        Width="400"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Select a preset:"
+                   Margin="0,0,0,5"/>
+
+        <ListBox x:Name="PresetsListBox"
+                 Grid.Row="1"
+                 SelectionChanged="PresetsListBox_SelectionChanged"
+                 DisplayMemberPath="Name"
+                 Margin="0,0,0,10"/>
+
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right">
+            <Button x:Name="LoadButton"
+                    Content="Load"
+                    Width="70"
+                    Margin="0,0,10,0"
+                    Click="LoadButton_Click"
+                    IsDefault="True"/>
+            <Button x:Name="CancelButton"
+                    Content="Cancel"
+                    Width="70"
+                    Click="CancelButton_Click"
+                    IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

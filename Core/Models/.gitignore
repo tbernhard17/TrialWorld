@@ -1,0 +1,6 @@
+﻿# Prevent backup and temporary files from being committed
+*.bak
+*.tmp
+*copy*.cs
+*.duplicate.cs
+New*.txt

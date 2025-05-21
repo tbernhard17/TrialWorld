@@ -1,0 +1,2 @@
+﻿# This directory is reserved for FFmpeg-related core interfaces and models
+# Implementation details should be in the Infrastructure layer

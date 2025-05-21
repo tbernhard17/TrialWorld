@@ -1,0 +1,344 @@
+<UserControl x:Class="TrialWorld.Presentation.Views.TranscriptionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:TrialWorld.Presentation.Views"
+             xmlns:vm="clr-namespace:TrialWorld.Presentation.ViewModels"
+             xmlns:conv="clr-namespace:TrialWorld.Presentation.Converters"
+             mc:Ignorable="d"
+             d:DesignHeight="600"
+             d:DesignWidth="800">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <!-- Converters -->
+            <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+            <conv:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" />
+            <conv:BooleanInverterConverter x:Key="BoolInverterConverter" />
+            
+            <!-- Queue Item Template -->
+            <DataTemplate x:Key="TranscriptionQueueItemTemplate">
+                <Border Padding="12,8" 
+                        Margin="0,4" 
+                        BorderThickness="0,0,0,1" 
+                        BorderBrush="#22000000">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        
+                        <!-- File Name and Status -->
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBlock Grid.Column="0" 
+                                       Text="{Binding MediaPath}" 
+                                       FontWeight="SemiBold" 
+                                       TextTrimming="CharacterEllipsis" />
+                            
+                            <TextBlock Grid.Column="1" 
+                                       Text="{Binding StatusText}" 
+                                       Margin="8,0,0,0" 
+                                       Foreground="{Binding Status, Converter={StaticResource StatusToBrushConverter}}" />
+                        </Grid>
+                        
+                        <!-- Progress Bar -->
+                        <ProgressBar Grid.Row="1" 
+                                     Height="6" 
+                                     Margin="0,6" 
+                                     Value="{Binding Progress}" 
+                                     Maximum="100" />
+                        
+                        <!-- Timestamps and Actions -->
+                        <Grid Grid.Row="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0" 
+                                        Orientation="Horizontal">
+                                <TextBlock Text="Submitted: " 
+                                           FontSize="11" 
+                                           Foreground="#666666" />
+                                <TextBlock Text="{Binding SubmittedAt, StringFormat='{}{0:g}'}" 
+                                           FontSize="11" 
+                                           Foreground="#666666" 
+                                           Margin="0,0,12,0" />
+                                <TextBlock Text="Updated: " 
+                                           FontSize="11" 
+                                           Foreground="#666666" />
+                                <TextBlock Text="{Binding LastUpdated, StringFormat='{}{0:g}'}" 
+                                           FontSize="11" 
+                                           Foreground="#666666" />
+                            </StackPanel>
+                            
+                            <StackPanel Grid.Column="1" 
+                                        Orientation="Horizontal">
+                                <Button Content="Open" 
+                                        Margin="0,0,8,0" 
+                                        Padding="8,2" 
+                                        Command="{Binding DataContext.OpenTranscriptionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                        CommandParameter="{Binding}" 
+                                        Visibility="{Binding IsCompleted, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                
+                                <Button Content="Retry" 
+                                        Padding="8,2" 
+                                        Command="{Binding DataContext.RetryTranscriptionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                        CommandParameter="{Binding}" 
+                                        Visibility="{Binding IsFailed, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Grid.Row="0" 
+                   Text="Transcription" 
+                   FontSize="24" 
+                   FontWeight="SemiBold" 
+                   Margin="0,0,0,20" />
+
+        <!-- Media Selection and Transcription Controls -->
+        <Grid Grid.Row="1" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            
+            <!-- Media Path -->
+            <TextBox Grid.Column="0" 
+                     Text="{Binding MediaPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                     IsReadOnly="True" 
+                     Padding="8,6" />
+            
+            <!-- Browse Button -->
+            <Button Grid.Column="1" 
+                    Content="Browse..." 
+                    Padding="12,6" 
+                    Margin="8,0" 
+                    Command="{Binding BrowseMediaCommand}" />
+            
+            <!-- Transcribe Button -->
+            <Button Grid.Column="2" 
+                    Content="Transcribe" 
+                    Padding="12,6" 
+                    Background="#3C8BCC" 
+                    Foreground="White" 
+                    Command="{Binding TranscribeCommand}" 
+                    IsEnabled="{Binding CanTranscribe}" />
+        </Grid>
+
+        <!-- Silence Detection Settings -->
+        <Expander Grid.Row="2" 
+                  Header="Transcription Settings" 
+                  Margin="0,0,0,20" 
+                  IsExpanded="True">
+            <Grid Margin="0,10,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                
+                <!-- Enable Silence Detection -->
+                <CheckBox Grid.Row="0" 
+                          Content="Enable Silence Detection" 
+                          IsChecked="{Binding EnableSilenceDetection}" 
+                          Margin="0,0,0,10" />
+                
+                <!-- Silence Threshold -->
+                <Grid Grid.Row="1" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Grid.Column="0" 
+                               Text="Noise Floor (dB):" 
+                               VerticalAlignment="Center" 
+                               Margin="0,0,10,0" 
+                               IsEnabled="{Binding EnableSilenceDetection}" />
+                    
+                    <Slider Grid.Column="1" 
+                            Minimum="-60" 
+                            Maximum="-10" 
+                            Value="{Binding SilenceThresholdDb}" 
+                            IsEnabled="{Binding EnableSilenceDetection}" 
+                            TickFrequency="5" 
+                            IsSnapToTickEnabled="True" 
+                            TickPlacement="BottomRight" />
+                    
+                    <TextBlock Grid.Column="2" 
+                               Text="{Binding SilenceThresholdDb}" 
+                               VerticalAlignment="Center" 
+                               Margin="10,0,0,0" 
+                               IsEnabled="{Binding EnableSilenceDetection}" 
+                               Width="30" 
+                               TextAlignment="Right" />
+                </Grid>
+                
+                <!-- Minimum Silence Duration -->
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Grid.Column="0" 
+                               Text="Min Silence Duration (ms):" 
+                               VerticalAlignment="Center" 
+                               Margin="0,0,10,0" 
+                               IsEnabled="{Binding EnableSilenceDetection}" />
+                    
+                    <Slider Grid.Column="1" 
+                            Minimum="1000" 
+                            Maximum="30000" 
+                            Value="{Binding MinimumSilenceDurationMs}" 
+                            IsEnabled="{Binding EnableSilenceDetection}" 
+                            TickFrequency="1000" 
+                            IsSnapToTickEnabled="True" 
+                            TickPlacement="BottomRight" />
+                    
+                    <TextBlock Grid.Column="2" 
+                               Text="{Binding MinimumSilenceDurationMs}" 
+                               VerticalAlignment="Center" 
+                               Margin="10,0,0,0" 
+                               IsEnabled="{Binding EnableSilenceDetection}" 
+                               Width="50" 
+                               TextAlignment="Right" />
+                </Grid>
+            </Grid>
+        </Expander>
+
+        <!-- Transcription Queue -->
+        <Grid Grid.Row="3">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            
+            <!-- Queue Header -->
+            <TextBlock Grid.Row="0" 
+                       Text="Transcription Queue" 
+                       FontSize="16" 
+                       FontWeight="SemiBold" 
+                       Margin="0,0,0,10" />
+            
+            <!-- Queue List -->
+            <ListView Grid.Row="1" 
+                      ItemsSource="{Binding QueueItems}" 
+                      ItemTemplate="{StaticResource TranscriptionQueueItemTemplate}" 
+                      BorderThickness="0" 
+                      Background="Transparent" 
+                      ScrollViewer.CanContentScroll="False">
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="BorderThickness" Value="0" />
+                    </Style>
+                </ListView.ItemContainerStyle>
+            </ListView>
+            
+            <!-- Empty State -->
+            <TextBlock Grid.Row="1" 
+                       Text="No transcription jobs in queue" 
+                       HorizontalAlignment="Center" 
+                       VerticalAlignment="Center" 
+                       Foreground="#666666" 
+                       FontStyle="Italic" 
+                       Visibility="{Binding HasQueueItems, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
+        </Grid>
+        
+        <!-- Processing Overlay -->
+        <Grid Grid.Row="0" 
+              Grid.RowSpan="4" 
+              Background="#88000000" 
+              Visibility="{Binding IsTranscribing, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border VerticalAlignment="Center" 
+                   HorizontalAlignment="Center" 
+                   Background="White" 
+                   Padding="30,20" 
+                   Width="400">
+                <StackPanel>
+                <TextBlock Text="{Binding StatusMessage}" 
+                           HorizontalAlignment="Center" 
+                           Margin="0,0,0,15" 
+                           FontWeight="SemiBold" />
+                
+                <ProgressBar Height="10" 
+                             Value="{Binding TranscriptionProgress}" 
+                             Maximum="100" 
+                             Margin="0,0,0,15" />
+                
+                <Button Content="Cancel" 
+                        HorizontalAlignment="Center" 
+                        Padding="20,5" 
+                        Command="{Binding CancelTranscriptionCommand}" 
+                        IsEnabled="{Binding CanCancel}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+        
+        <!-- Error Message -->
+        <Border Grid.Row="0" 
+                Grid.RowSpan="4" 
+                Background="#FFEBEE" 
+                BorderBrush="#FFB0BEC5" 
+                BorderThickness="1" 
+                Padding="20" 
+                Margin="40" 
+                VerticalAlignment="Top" 
+                HorizontalAlignment="Center" 
+                MaxWidth="600" 
+                Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Column="0" 
+                           Text="⚠️" 
+                           FontSize="20" 
+                           Margin="0,0,10,0" 
+                           VerticalAlignment="Top" />
+                
+                <TextBlock Grid.Column="1" 
+                           Text="{Binding ErrorMessage}" 
+                           TextWrapping="Wrap" />
+                
+                <Button Grid.Column="2" 
+                        Content="✕" 
+                        Background="Transparent" 
+                        BorderThickness="0" 
+                        Margin="10,0,0,0" 
+                        VerticalAlignment="Top" 
+                        Command="{Binding ClearErrorCommand}" />
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

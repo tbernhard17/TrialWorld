@@ -1,0 +1,376 @@
+using System;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
+using System.Timers;
+using System.Windows.Input;
+using System.Linq;
+using System.Collections.ObjectModel;
+using System.Collections.Concurrent;
+using System.Threading;
+using System.Collections.Generic;
+using TrialWorld.Core.Interfaces;
+using TrialWorld.Core.Models.Transcription;
+using TrialWorld.Presentation.ViewModels.Media;
+using TrialWorld.Presentation.ViewModels.Search;
+using TrialWorld.Presentation.Commands;
+using TrialWorld.Presentation.Interfaces;
+using TrialWorld.Infrastructure.Models.AssemblyAI;
+
+namespace TrialWorld.Presentation.ViewModels
+{
+    public class MainWindowViewModel : INotifyPropertyChanged
+    {
+        #region Fields and Properties
+
+        // Services
+        private readonly IFileDialogService _fileDialogService;
+        private readonly INavigationService _navigationService;
+        private readonly INotificationService _notificationService;
+        private readonly IThemeService _themeService;
+        private readonly IWindowManager _windowManager;
+        private readonly IVersionService _versionService;
+        private readonly IResourceMonitorService _resourceMonitorService;
+        private readonly ITranscriptionService _transcriptionService;
+        private readonly Dictionary<TranscriptionQueueItem, CancellationTokenSource> _activeTranscriptions = new();
+        
+        // Search Service
+        private readonly SearchService _searchService = new();
+
+        // Status Properties
+        private string _statusText = "Ready";
+        public string StatusText
+        {
+            get => _statusText;
+            set { _statusText = value; OnPropertyChanged(); }
+        }
+
+        private string _cpuUsage = "CPU: 0%";
+        public string CpuUsage
+        {
+            get => _cpuUsage;
+            set { _cpuUsage = value; OnPropertyChanged(); }
+        }
+
+        // Transcription Queue
+        public ObservableCollection<TranscriptionQueueItem> TranscriptionQueue { get; } = new();
+        
+        // Search Results Collection
+        private ObservableCollection<SearchResultItem> _searchResults = new();
+        public ObservableCollection<SearchResultItem> SearchResults
+        {
+            get => _searchResults;
+            set { _searchResults = value; OnPropertyChanged(); }
+        }
+        
+        // Active Transcription Content for Search
+        private string _currentTranscriptId;
+        private AssemblyAITranscriptResponse _currentTranscription;
+
+        #endregion
+
+        #region Constructors
+
+        // Constructor with service injection
+        public MainWindowViewModel(
+            IFileDialogService fileDialogService,
+            INavigationService navigationService,
+            INotificationService notificationService,
+            IThemeService themeService,
+            IWindowManager windowManager,
+            IVersionService versionService,
+            IResourceMonitorService resourceMonitorService,
+            ITranscriptionService transcriptionService)
+        {
+            _fileDialogService = fileDialogService;
+            _navigationService = navigationService;
+            _notificationService = notificationService;
+            _themeService = themeService;
+            _windowManager = windowManager;
+            _versionService = versionService;
+            _resourceMonitorService = resourceMonitorService;
+            _transcriptionService = transcriptionService;
+
+            // Commands initialization
+            // ...
+        }
+
+        // Parameterless constructor for design time
+        public MainWindowViewModel()
+        {
+            // Use mock services or default values
+        }
+
+        #endregion
+
+        #region Transcription Queue Methods
+
+        // Add a file to the queue
+        public void AddFile(string filePath)
+        {
+            // Add code to handle adding a file to the transcription queue
+            StatusText = $"Added file: {filePath}";
+            
+            var item = new TranscriptionQueueItem { FilePath = filePath };
+            TranscriptionQueue.Add(item);
+        }
+
+        // Add a folder to the queue
+        public void AddFolder(string folderPath)
+        {
+            // Add code to scan the folder for media files and add them to the queue
+            // For now just a placeholder message
+            StatusText = $"Adding files from: {folderPath} (Not implemented)";
+        }
+
+        // Process all queue items
+        public void ProcessAll()
+        {
+            StatusText = "Processing all queue items...";
+            foreach (var item in TranscriptionQueue)
+            {
+                // Process items
+                item.Status = "Processing";
+            }
+        }
+
+        // Cancel all queue items
+        public void CancelAll()
+        {
+            StatusText = "Cancelling all queue items...";
+            foreach (var item in TranscriptionQueue)
+            {
+                // Cancel pending items
+                item.Status = "Cancelled";
+            }
+        }
+
+        // Clear the queue
+        public void ClearQueue()
+        {
+            StatusText = "Clearing queue...";
+            TranscriptionQueue.Clear();
+        }
+
+        // Stop a single queue item
+        public void StopSingle(TranscriptionQueueItem item)
+        {
+            StatusText = $"Stopping item: {item.FileName}";
+            item.Status = "Stopped";
+        }
+
+        // Remove a single queue item
+        public void RemoveSingle(TranscriptionQueueItem item)
+        {
+            StatusText = $"Removing item: {item.FileName}";
+            TranscriptionQueue.Remove(item);
+        }
+
+        #endregion
+
+        #region Command Methods
+
+        private void PlayMedia()
+        {
+            StatusText = "Playing media...";
+            // Media playback logic
+        }
+
+        private void PauseMedia()
+        {
+            StatusText = "Media paused.";
+            // Media pause logic
+        }
+
+        private void StopMedia()
+        {
+            StatusText = "Media stopped.";
+            // Media stop logic
+        }
+
+        private void OpenMedia()
+        {
+            // Use FileDialogService to show the open file dialog
+            var result = _fileDialogService.ShowOpenFileDialog("Media Files|*.mp4;*.mkv;*.avi;*.mov;*.wmv;*.mp3;*.wav;*.aac|All Files|*.*", "Select Media File");
+            
+            if (result != null)
+            {
+                StatusText = $"Opening media: {result}";
+                // Media open logic
+            }
+            else
+            {
+                StatusText = "Open media canceled.";
+            }
+        }
+
+        private void Exit()
+        {
+            StatusText = "Exiting...";
+            // Window close logic removed
+        }
+
+        public void OpenSettings()
+        {
+            // Use WindowManager to show the SettingsView dialog, resolving SettingsViewModel
+            _windowManager.ShowDialog<SettingsViewModel>();
+        }
+
+        private void OpenManageModels()
+        {
+            // Navigation logic removed
+        }
+
+        private void OpenAbout()
+        {
+            // About dialog logic removed
+        }
+
+        private void OpenDocumentation()
+        {
+            // Documentation logic removed
+        }
+
+        private void SwitchTheme(string theme)
+        {
+            // Theme switching logic removed
+        }
+
+        #endregion
+
+        #region INotifyPropertyChanged
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        /// <summary>
+        /// Raises the PropertyChanged event for the specified property name.
+        /// </summary>
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, PropertyChangedEventArgsCache.GetOrCreate(propertyName));
+        }
+
+        /// <summary>
+        /// Caches PropertyChangedEventArgs instances to reduce allocations.
+        /// </summary>
+        private static class PropertyChangedEventArgsCache
+        {
+            // Use ConcurrentDictionary for thread-safe, lock-free caching
+            private static readonly ConcurrentDictionary<string, PropertyChangedEventArgs> _cache = new();
+
+            public static PropertyChangedEventArgs GetOrCreate(string propertyName)
+            {
+                if (string.IsNullOrWhiteSpace(propertyName))
+                    throw new ArgumentException("Property name cannot be null or whitespace.", nameof(propertyName));
+
+                // Use GetOrAdd for atomic, efficient cache access
+                return _cache.GetOrAdd(propertyName, name => new PropertyChangedEventArgs(name));
+            }
+        }
+
+        #endregion
+
+        #region Search Methods
+        
+        /// <summary>
+        /// Set the current transcription for search operations
+        /// </summary>
+        public async Task<bool> SetActiveTranscriptionAsync(string transcriptId)
+        {
+            if (string.IsNullOrEmpty(transcriptId))
+            {
+                StatusText = "No transcription ID provided";
+                return false;
+            }
+                
+            try
+            {
+                StatusText = "Loading transcription data...";
+                
+                // In a real app, we would use _transcriptionService to get real data from storage or API
+                // For now, we'll use mock data
+                var mockTranscription = _searchService.CreateMockTranscriptionData(transcriptId);
+                await Task.Delay(500); // Simulate network delay
+                
+                // Store active transcription
+                _currentTranscriptId = transcriptId;
+                _currentTranscription = mockTranscription;
+                
+                StatusText = $"Loaded transcription: {transcriptId}";
+                return true;
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"Error loading transcription: {ex.Message}";
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Performs search on the current transcription
+        /// </summary>
+        public async Task<int> SearchAsync(string searchText, bool includeWords, bool includeSentiment, 
+                                          bool includeHighlights, bool includeChapters, string sentimentFilter)
+        {
+            if (string.IsNullOrEmpty(_currentTranscriptId) || _currentTranscription == null)
+            {
+                // Auto-load a mock transcription if none active
+                if (!await SetActiveTranscriptionAsync("mock-transcript-1"))
+                {
+                    return 0;
+                }
+            }
+            
+            try
+            {
+                StatusText = "Searching transcription...";
+                
+                // Clear existing results
+                SearchResults.Clear();
+                
+                // Perform search
+                var results = await _searchService.SearchTranscriptionAsync(
+                    _currentTranscription,
+                    _currentTranscriptId,
+                    searchText,
+                    includeWords,
+                    includeSentiment,
+                    includeHighlights,
+                    includeChapters,
+                    sentimentFilter);
+                    
+                // Add results to collection
+                foreach (var result in results)
+                {
+                    SearchResults.Add(result);
+                }
+                
+                StatusText = searchText.Length > 0 
+                    ? $"Found {SearchResults.Count} results for '{searchText}'" 
+                    : $"Loaded {SearchResults.Count} items from transcription";
+                    
+                return SearchResults.Count;
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"Search error: {ex.Message}";
+                return 0;
+            }
+        }
+        
+        /// <summary>
+        /// Jump to a specific timestamp in the media player
+        /// </summary>
+        public void JumpToTimestamp(int timestampMs)
+        {
+            // This would be implemented to control the media player
+            StatusText = $"Jumping to timestamp: {TimeSpan.FromMilliseconds(timestampMs):mm\\:ss}";
+            
+            // Event would be raised to notify the view
+            // MediaPositionChanged?.Invoke(this, new MediaPositionEventArgs(timestampMs));
+        }
+        
+        #endregion
+    }
+}

@@ -1,0 +1,338 @@
+<Window
+    x:Class="TrialWorld.Presentation.Views.MediaValidationView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:local="clr-namespace:TrialWorld.Presentation.Views"
+    xmlns:vm="clr-namespace:TrialWorld.Presentation.ViewModels"
+    mc:Ignorable="d"
+    Title="Media File Validation"
+    Height="700"
+    Width="1000"
+    WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <Style TargetType="GroupBox">
+            <Setter Property="Margin"
+                    Value="5"/>
+            <Setter Property="Padding"
+                    Value="5"/>
+        </Style>
+        <Style TargetType="TextBlock">
+            <Setter Property="VerticalAlignment"
+                    Value="Center"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="VerticalAlignment"
+                    Value="Center"/>
+            <Setter Property="Margin"
+                    Value="5"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Padding"
+                    Value="10,5"/>
+            <Setter Property="Margin"
+                    Value="5"/>
+            <Setter Property="MinWidth"
+                    Value="100"/>
+        </Style>
+        <Style TargetType="CheckBox">
+            <Setter Property="Margin"
+                    Value="5"/>
+            <Setter Property="VerticalAlignment"
+                    Value="Center"/>
+        </Style>
+        <Style TargetType="ListViewItem">
+            <Setter Property="HorizontalContentAlignment"
+                    Value="Stretch"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- File Selection Section -->
+        <GroupBox Grid.Row="0"
+                  Header="Media File">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBox Grid.Row="0"
+                         Grid.Column="0"
+                         Text="{Binding FilePath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         IsReadOnly="True"/>
+                <Button Grid.Row="0"
+                        Grid.Column="1"
+                        Content="Browse..."
+                        Command="{Binding BrowseCommand}"/>
+
+                <TextBlock Grid.Row="1"
+                           Grid.Column="0"
+                           Grid.ColumnSpan="2"
+                           Text="{Binding FileInfo}"
+                           Margin="5"
+                           Foreground="DarkGray"
+                           Visibility="{Binding HasFile, Converter={StaticResource BoolToVis}}"/>
+            </Grid>
+        </GroupBox>
+
+        <!-- Validation Settings Section -->
+        <GroupBox Grid.Row="1"
+                  Header="Validation Requirements">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="3*"/>
+                    <ColumnDefinition Width="4*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Basic Settings -->
+                <GroupBox Grid.Column="0"
+                          Header="Basic Settings">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Row="0"
+                                   Grid.Column="0"
+                                   Text="Max File Size (MB):"/>
+                        <TextBox Grid.Row="0"
+                                 Grid.Column="1"
+                                 Text="{Binding MaxFileSizeMb}"/>
+
+                        <TextBlock Grid.Row="1"
+                                   Grid.Column="0"
+                                   Text="Min Duration (sec):"/>
+                        <TextBox Grid.Row="1"
+                                 Grid.Column="1"
+                                 Text="{Binding MinDuration}"/>
+
+                        <TextBlock Grid.Row="2"
+                                   Grid.Column="0"
+                                   Text="Max Duration (sec):"/>
+                        <TextBox Grid.Row="2"
+                                 Grid.Column="1"
+                                 Text="{Binding MaxDuration}"/>
+
+                        <CheckBox Grid.Row="3"
+                                  Grid.Column="0"
+                                  Grid.ColumnSpan="2"
+                                  Content="Requires Video"
+                                  IsChecked="{Binding RequiresVideo}"/>
+
+                        <CheckBox Grid.Row="4"
+                                  Grid.Column="0"
+                                  Grid.ColumnSpan="2"
+                                  Content="Requires Audio"
+                                  IsChecked="{Binding RequiresAudio}"/>
+                    </Grid>
+                </GroupBox>
+
+                <!-- Advanced Settings -->
+                <Grid Grid.Column="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Video Settings -->
+                    <GroupBox Grid.Row="0"
+                              Header="Video Requirements"
+                              IsEnabled="{Binding RequiresVideo}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Row="0"
+                                       Grid.Column="0"
+                                       Text="Min Width (px):"/>
+                            <TextBox Grid.Row="0"
+                                     Grid.Column="1"
+                                     Text="{Binding MinVideoWidth}"/>
+
+                            <TextBlock Grid.Row="1"
+                                       Grid.Column="0"
+                                       Text="Min Height (px):"/>
+                            <TextBox Grid.Row="1"
+                                     Grid.Column="1"
+                                     Text="{Binding MinVideoHeight}"/>
+
+                            <TextBlock Grid.Row="2"
+                                       Grid.Column="0"
+                                       Text="Min Frame Rate (fps):"/>
+                            <TextBox Grid.Row="2"
+                                     Grid.Column="1"
+                                     Text="{Binding MinFrameRate}"/>
+                        </Grid>
+                    </GroupBox>
+
+                    <!-- Audio Settings -->
+                    <GroupBox Grid.Row="1"
+                              Header="Audio Requirements"
+                              IsEnabled="{Binding RequiresAudio}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Row="0"
+                                       Grid.Column="0"
+                                       Text="Min Channels:"/>
+                            <TextBox Grid.Row="0"
+                                     Grid.Column="1"
+                                     Text="{Binding MinAudioChannels}"/>
+
+                            <TextBlock Grid.Row="1"
+                                       Grid.Column="0"
+                                       Text="Min Sample Rate (Hz):"/>
+                            <TextBox Grid.Row="1"
+                                     Grid.Column="1"
+                                     Text="{Binding MinSampleRate}"/>
+                        </Grid>
+                    </GroupBox>
+                </Grid>
+            </Grid>
+        </GroupBox>
+
+        <!-- Validation Results Section -->
+        <Grid Grid.Row="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Validation Status -->
+            <Border Grid.Row="0"
+                    BorderThickness="1"
+                    BorderBrush="#DDDDDD"
+                    Background="#F5F5F5"
+                    Margin="5"
+                    Padding="10"
+                    Visibility="{Binding HasValidated, Converter={StaticResource BoolToVis}}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Validation Status: "
+                               FontWeight="Bold"/>
+                    <TextBlock Text="Valid"
+                               FontWeight="Bold"
+                               Foreground="Green"
+                               Visibility="{Binding IsValidFile, Converter={StaticResource BoolToVis}}"/>
+                    <TextBlock Text="Invalid"
+                               FontWeight="Bold"
+                               Foreground="Red"
+                               Visibility="{Binding IsValidFile, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Results Tabs -->
+            <TabControl Grid.Row="1"
+                        Margin="5"
+                        Visibility="{Binding HasValidated, Converter={StaticResource BoolToVis}}">
+                <TabItem Header="Validation Errors">
+                    <ListView ItemsSource="{Binding ValidationErrors}">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Code"
+                                                Width="150"
+                                                DisplayMemberBinding="{Binding Code}"/>
+                                <GridViewColumn Header="Message"
+                                                Width="Auto"
+                                                DisplayMemberBinding="{Binding Message}"/>
+                            </GridView>
+                        </ListView.View>
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="Background"
+                                        Value="#FFF8F8"/>
+                                <Setter Property="Margin"
+                                        Value="0,2"/>
+                                <Setter Property="Padding"
+                                        Value="5"/>
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                    </ListView>
+                </TabItem>
+                <TabItem Header="Metadata">
+                    <ListView ItemsSource="{Binding MetadataEntries}">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Property"
+                                                Width="200"
+                                                DisplayMemberBinding="{Binding Key}"/>
+                                <GridViewColumn Header="Value"
+                                                Width="Auto"
+                                                DisplayMemberBinding="{Binding Value}"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </TabItem>
+            </TabControl>
+
+            <!-- No Validation Performed Message -->
+            <TextBlock Grid.Row="1"
+                       Text="Select a file and click Validate to check if it meets the requirements."
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       FontSize="16"
+                       Foreground="Gray"
+                       Visibility="{Binding HasValidated, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}"/>
+        </Grid>
+
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="3"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right">
+            <Button Content="Validate"
+                    Command="{Binding ValidateCommand}"
+                    IsEnabled="{Binding HasFile}"
+                    Padding="15,8"
+                    FontWeight="Bold">
+                <Button.Style>
+                    <Style TargetType="Button"
+                           BasedOn="{StaticResource {x:Type Button}}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsValidating}"
+                                         Value="True">
+                                <Setter Property="Content"
+                                        Value="Validating..."/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -1,0 +1,89 @@
+using TrialWorld.Presentation.Dialogs;
+using TrialWorld.Presentation.ViewModels;
+using TrialWorld.Presentation.Interfaces;
+// Using alias to resolve ambiguity between model and viewmodel types
+using Models = TrialWorld.Presentation.Models;
+using System;
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Threading;
+using Microsoft.Win32;
+using TrialWorld.Core.Interfaces;
+using Microsoft.Extensions.Logging;
+using TrialWorld.Core.Models.Configuration;
+
+namespace TrialWorld.Presentation
+{
+    /// <summary>
+    /// Interaction logic for MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window
+    {
+        // Media timer for updating UI during playback
+        private readonly Process _currentProcess = Process.GetCurrentProcess();
+        private readonly ILogger<MainWindow> _logger;
+        private readonly MainWindowViewModel _viewModel = null!; // Initialized in constructor
+        private readonly INotificationService _notificationService;
+        private readonly Views.TranscriptionView _transcriptionView;
+        private DispatcherTimer _mediaTimer = null!; // Initialized in MediaPlayer_MediaOpened
+        private readonly TranscriptionModelViewModel _transcriptionModelViewModel;
+
+        public MainWindow(MainWindowViewModel viewModel, ILogger<MainWindow> logger, INotificationService notificationService, Views.TranscriptionView transcriptionView, TranscriptionModelViewModel transcriptionModelViewModel)
+        {
+            // Log the state of dependencies
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] MainWindow constructor called. viewModel is null: {viewModel == null}");
+            
+            // Validate input parameters
+            if (logger is null)
+                throw new ArgumentNullException(nameof(logger));
+            if (viewModel is null)
+                throw new ArgumentNullException(nameof(viewModel));
+            if (notificationService is null)
+                throw new ArgumentNullException(nameof(notificationService));
+            if (transcriptionView is null)
+                throw new ArgumentNullException(nameof(transcriptionView));
+            if (transcriptionModelViewModel is null)
+                throw new ArgumentNullException(nameof(transcriptionModelViewModel));
+                
+            logger.LogInformation("[DEBUG] MainWindow constructor called. viewModel is null: {isNull}", viewModel == null);
+
+            InitializeComponent();
+            DataContext = viewModel;
+            _viewModel = viewModel;
+            _logger = logger;
+            _notificationService = notificationService;
+            _transcriptionView = transcriptionView;
+            _transcriptionModelViewModel = transcriptionModelViewModel;
+            
+            // Start resource monitoring timer
+            var resourceTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            resourceTimer.Tick += ResourceMonitorTimer_Tick;
+            resourceTimer.Start();
+            
+            // Check for FFmpeg availability
+            CheckFFmpegAvailability();
+        }
+        
+        // Method implementations...
+        
+        private void StopSingle_Click(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel != null && sender is FrameworkElement element && element.Tag is Models.TranscriptionQueueItem item)
+            {
+                _viewModel.StopSingleCommand.Execute(item);
+            }
+        }
+
+        private void RemoveSingle_Click(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel != null && sender is FrameworkElement element && element.Tag is Models.TranscriptionQueueItem item)
+            {
+                _viewModel.RemoveSingleCommand.Execute(item);
+            }
+        }
+    }
+}

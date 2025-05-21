@@ -1,0 +1,142 @@
+<UserControl x:Class="TrialWorld.Presentation.Controls.MediaTimelineControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:TrialWorld.Presentation.Controls"
+             mc:Ignorable="d"
+             d:DesignHeight="100"
+             d:DesignWidth="800">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <!-- Timeline Marker Template -->
+            <ControlTemplate x:Key="TimelineMarkerTemplate"
+                             TargetType="ContentControl">
+                <Grid>
+                    <Line X1="0"
+                          Y1="0"
+                          X2="0"
+                          Y2="20"
+                          Stroke="#FFFF0000"
+                          StrokeThickness="2"/>
+                    <Polygon Points="0,0 -5,5 5,5"
+                             Fill="#FFFF0000"/>
+                </Grid>
+            </ControlTemplate>
+
+            <!-- Time Indicator Template -->
+            <ControlTemplate x:Key="TimeIndicatorTemplate"
+                             TargetType="ContentControl">
+                <Grid>
+                    <Rectangle Width="1"
+                               Height="40"
+                               Fill="#FFFFFFFF"
+                               Opacity="0.7"/>
+                    <Ellipse Width="8"
+                             Height="8"
+                             Fill="#FFFFFFFF"
+                             VerticalAlignment="Top"
+                             Margin="0,-4,0,0"/>
+                </Grid>
+            </ControlTemplate>
+
+            <!-- Time Scale Tick Template -->
+            <DataTemplate x:Key="TimeScaleTickTemplate">
+                <StackPanel Orientation="Vertical">
+                    <Line X1="0"
+                          Y1="0"
+                          X2="0"
+                          Y2="6"
+                          Stroke="#99FFFFFF"
+                          StrokeThickness="1"/>
+                    <TextBlock Text="{Binding}"
+                               Foreground="#AAFFFFFF"
+                               FontSize="10"
+                               Margin="0,2,0,0"/>
+                </StackPanel>
+            </DataTemplate>
+
+            <!-- Converters -->
+            <local:TimeSpanToPixelWidthConverter x:Key="TimeSpanToPixelWidthConverter"/>
+            <local:TimeSpanToTextConverter x:Key="TimeSpanToTextConverter"/>
+            <local:SecondsToTimeSpanConverter x:Key="SecondsToTimeSpanConverter"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid x:Name="rootGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Timeline Scale -->
+        <Canvas x:Name="timelineScale"
+                Grid.Row="0"
+                Height="20"
+                Background="Transparent">
+            <!-- Timeline scale ticks will be added programmatically -->
+        </Canvas>
+
+        <!-- Timeline Content -->
+        <ScrollViewer Grid.Row="1"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Disabled"
+                      PreviewMouseWheel="ScrollViewer_PreviewMouseWheel">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Timeline Track -->
+                <Canvas x:Name="timelineTrack"
+                        Grid.Row="0"
+                        Height="20"
+                        Background="#333333"
+                        ClipToBounds="True">
+                    <!-- Current Position Indicator -->
+                    <ContentControl x:Name="currentPositionIndicator"
+                                    Template="{StaticResource TimeIndicatorTemplate}"
+                                    Canvas.Left="0"
+                                    Canvas.Top="0"
+                                    Height="20"/>
+
+                    <!-- Timeline Markers Container -->
+                    <Canvas x:Name="markersCanvas"
+                            Width="{Binding ActualWidth, ElementName=timelineTrack}"
+                            Height="20">
+                        <!-- Markers will be added programmatically -->
+                    </Canvas>
+                </Canvas>
+
+                <!-- Timeline Segments -->
+                <Canvas x:Name="segmentsCanvas"
+                        Grid.Row="1"
+                        Background="#222222"
+                        Height="60"
+                        ClipToBounds="True">
+                    <!-- Segments (e.g., chapters, scenes, etc.) will be added programmatically -->
+                </Canvas>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- Overlay Elements -->
+        <Canvas x:Name="overlayCanvas"
+                Grid.RowSpan="2"
+                IsHitTestVisible="False">
+            <!-- Tooltip and other overlay elements -->
+            <Border x:Name="timeTooltip"
+                    Background="#CC000000"
+                    BorderBrush="#444444"
+                    BorderThickness="1"
+                    CornerRadius="3"
+                    Padding="6,3"
+                    Visibility="Collapsed">
+                <TextBlock x:Name="tooltipText"
+                           Foreground="White"
+                           FontSize="12"/>
+            </Border>
+        </Canvas>
+    </Grid>
+</UserControl>
