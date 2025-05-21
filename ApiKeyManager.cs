@@ -113,20 +113,7 @@ namespace TrialWorld.AssemblyAIDiagnostic
                 
                 if (!string.IsNullOrEmpty(apiKey))
                 {
-                    // Create a new configuration with the API key
-                    var configDictionary = new Dictionary<string, string>
-                    {
-                        { "AssemblyAI:ApiKey", apiKey }
-                    };
-                    
-                    var configBuilder = new ConfigurationBuilder();
-                    configBuilder.AddInMemoryCollection(configDictionary);
-                    var configToAdd = configBuilder.Build();
-                    
-                    // Add the new configuration to the existing one
-                    ((IConfigurationRoot)configuration).Providers.ToList()
-                        .ForEach(provider => ((ConfigurationRoot)configToAdd).Add(provider));
-                    
+                    configuration["AssemblyAI:ApiKey"] = apiKey;
                     _logger.LogInformation("Configuration updated with AssemblyAI API key");
                 }
                 else
@@ -205,23 +192,8 @@ namespace TrialWorld.AssemblyAIDiagnostic
             
             if (!string.IsNullOrEmpty(apiKey))
             {
-                // Use reflection to set the API key in the configuration
-                var configType = configuration.GetType();
-                var dataProperty = configType.GetProperty("Data");
-                
-                if (dataProperty != null)
-                {
-                    var data = dataProperty.GetValue(configuration) as System.Collections.Generic.IDictionary<string, object>;
-                    if (data != null && data.ContainsKey("AssemblyAI"))
-                    {
-                        var assemblyAIConfig = data["AssemblyAI"] as System.Collections.Generic.IDictionary<string, object>;
-                        if (assemblyAIConfig != null)
-                        {
-                            assemblyAIConfig["ApiKey"] = apiKey;
-                            _logger.LogInformation("Configuration updated with stored AssemblyAI API key");
-                        }
-                    }
-                }
+                configuration["AssemblyAI:ApiKey"] = apiKey;
+                _logger.LogInformation("Configuration updated with stored AssemblyAI API key");
             }
         }
 
