@@ -6,7 +6,7 @@ namespace TrialWorld.Core.Transcription
     public class TranscriptionSegment
     {
         [JsonPropertyName("text")]
-        public string Text { get; set; }
+        public string Text { get; set; } = string.Empty;
 
         [JsonPropertyName("start")]
         public int Start { get; set; } // Start timestamp in milliseconds
@@ -18,9 +18,9 @@ namespace TrialWorld.Core.Transcription
         public float Confidence { get; set; }
 
         [JsonPropertyName("speaker")]
-        public string Speaker { get; set; }
+        public string Speaker { get; set; } = string.Empty;
 
         [JsonPropertyName("sentiment")]
-        public string Sentiment { get; set; } // e.g., "POSITIVE", "NEGATIVE", "NEUTRAL"
+        public string Sentiment { get; set; } = string.Empty; // e.g., "POSITIVE", "NEGATIVE", "NEUTRAL"
     }
 }

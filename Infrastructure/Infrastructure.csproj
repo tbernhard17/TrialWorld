@@ -6,6 +6,13 @@
     <ProjectReference Include="..\Persistence\Persistence.csproj" />
   </ItemGroup>
 
+  <!-- Include legacy diagnostic files for AssemblyAI integration -->
+  <ItemGroup>
+    <Compile Include="..\Configuration\AssemblyAIOptions.cs" Link="Configuration\AssemblyAIOptions.cs" />
+    <Compile Include="..\Services\*.cs" Link="LegacyServices\%(Filename)%(Extension)" />
+    <Compile Include="..\Repositories\TranscriptionRepository.cs" Link="LegacyRepositories\TranscriptionRepository.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="CliWrap" Version="3.6.6" />
     <PackageReference Include="AutoMapper" Version="12.0.1" />
