@@ -53,7 +53,7 @@ namespace TrialWorld.Persistence.Repositories
                 Text = entity.Text ?? string.Empty,
                 Confidence = entity.Confidence,
                 Speaker = entity.SpeakerLabel ?? string.Empty,
-                Sentiment = entity.SentimentScore?.ToString()
+                Sentiment = entity.SentimentScore?.ToString() ?? string.Empty
                 // Words is not in entity, so it will be null
             };
         }
@@ -250,7 +250,7 @@ namespace TrialWorld.Persistence.Repositories
                     Text = entity.Text ?? string.Empty,
                     Confidence = entity.Confidence,
                     Speaker = entity.SpeakerLabel ?? string.Empty,
-                    Sentiment = entity.SentimentScore?.ToString()
+                    Sentiment = entity.SentimentScore?.ToString() ?? string.Empty
                     // Words is not in entity
                 }).ToList();
                 
@@ -336,10 +336,10 @@ namespace TrialWorld.Persistence.Repositories
                     MediaId = entity.MediaId,
                     StartTime = entity.StartTime.TotalMilliseconds,
                     EndTime = entity.EndTime.TotalMilliseconds,
-                    Text = entity.Text,
+                    Text = entity.Text ?? string.Empty,
                     Confidence = entity.Confidence,
-                    Speaker = entity.SpeakerLabel,
-                    Sentiment = entity.SentimentScore?.ToString()
+                    Speaker = entity.SpeakerLabel ?? string.Empty,
+                    Sentiment = entity.SentimentScore?.ToString() ?? string.Empty
                     // Words is not in entity
                 }).ToList();
             }
@@ -369,10 +369,10 @@ namespace TrialWorld.Persistence.Repositories
                 MediaId = entity.MediaId,
                 StartTime = entity.StartTime.TotalMilliseconds,
                 EndTime = entity.EndTime.TotalMilliseconds,
-                Text = entity.Text,
+                Text = entity.Text ?? string.Empty,
                 Confidence = entity.Confidence,
-                Speaker = entity.SpeakerLabel,
-                Sentiment = entity.SentimentScore?.ToString()
+                Speaker = entity.SpeakerLabel ?? string.Empty,
+                Sentiment = entity.SentimentScore?.ToString() ?? string.Empty
                 // Words is not in entity
             }).ToList();
         }
@@ -416,10 +416,10 @@ namespace TrialWorld.Persistence.Repositories
                     MediaId = entity.MediaId,
                     StartTime = entity.StartTime.TotalMilliseconds,
                     EndTime = entity.EndTime.TotalMilliseconds,
-                    Text = entity.Text,
+                    Text = entity.Text ?? string.Empty,
                     Confidence = entity.Confidence,
-                    Speaker = entity.SpeakerLabel,
-                    Sentiment = entity.SentimentScore?.ToString()
+                    Speaker = entity.SpeakerLabel ?? string.Empty,
+                    Sentiment = entity.SentimentScore?.ToString() ?? string.Empty
                     // Words is not in entity
                 }).ToList();
             }
@@ -458,10 +458,10 @@ namespace TrialWorld.Persistence.Repositories
                     MediaId = entity.MediaId,
                     StartTime = entity.StartTime.TotalMilliseconds,
                     EndTime = entity.EndTime.TotalMilliseconds,
-                    Text = entity.Text,
+                    Text = entity.Text ?? string.Empty,
                     Confidence = entity.Confidence,
-                    Speaker = entity.SpeakerLabel,
-                    Sentiment = entity.SentimentScore?.ToString()
+                    Speaker = entity.SpeakerLabel ?? string.Empty,
+                    Sentiment = entity.SentimentScore?.ToString() ?? string.Empty
                     // Words is not in entity
                 }).ToList();
             }
