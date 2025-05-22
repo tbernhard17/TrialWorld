@@ -73,7 +73,7 @@ namespace TrialWorld.Application.Services
                             Confidence = (float)(s?.Confidence ?? 0)
                         }).ToList() 
                         : new List<SearchableTimestamp>(),
-                    Metadata = metadata.Metadata ?? new Dictionary<string, string>()
+                    Metadata = metadata?.Metadata ?? new Dictionary<string, string>()
                 };
 
                 if (metadata?.FilePath != null && !string.IsNullOrEmpty(metadata.FilePath) && content.Metadata != null)
